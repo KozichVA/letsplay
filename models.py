@@ -2,35 +2,41 @@ from sqlalchemy.orm import declarative_base, declarative_mixin, sessionmaker
 from sqlalchemy import Column, INT, ForeignKey, BOOLEAN, VARCHAR, TIMESTAMP, create_engine, select
 
 Base = declarative_base()
+
+
 @declarative_mixin
 class Basemixin(object):
     id = Column(INT, primary_key=True)
 
     engine = create_engine('postgresql://axlamon:axlamon@localhost:5432/letsplay')
     session = sessionmaker(bind=engine)
+
     @staticmethod
     def create_async_session(func):
         async def wrapper(*args, **kwargs):
             async with Base.session() as session:
                 return await func(*args, **kwargs, session=session)
 
+        return wrapper
+
     @create_async_session
     async def save(self, session) -> None:
         await session.add(self)
         await session.commit()
         await session.refresh(self)
+
     @create_async_session
     async def delete(self, session) -> None:
         await session.delete(self)
         await session.commit()
 
-    @create_async_session
     @classmethod
+    @create_async_session
     async def get(cls, pk: int, session):
         return await session.get(cls, pk)
 
-    @create_async_session
     @classmethod
+    @create_async_session
     async def all(cls, order_by,  session, **kwargs):
         return await session.scalars(select(cls).filter_by(kwargs).order_by(order_by))
 
@@ -41,8 +47,10 @@ class Category(Base, Basemixin):
     name = Column(VARCHAR(255), nullable=True, unique=True)
     price = Column(INT, nullable=True)
 
-class Game(Base):
+
+class Game(Base, Basemixin):
     __tablename__ = 'games'
+
     id = Column(INT, primary_key=True)
     categpry_id = Column(INT, ForeignKey('categories.id', ondelete='CASCADE'))
     name = Column(VARCHAR(255), nullable=True, unique=True)
