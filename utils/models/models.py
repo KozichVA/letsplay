@@ -1,5 +1,6 @@
 from sqlalchemy.orm import declarative_base, declarative_mixin, sessionmaker
-from sqlalchemy import Column, INT, ForeignKey, BOOLEAN, VARCHAR, TIMESTAMP, create_engine, select
+from sqlalchemy import Column, INT, ForeignKey, BOOLEAN, VARCHAR, TIMESTAMP, select
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 
 Base = declarative_base()
 
@@ -8,25 +9,25 @@ Base = declarative_base()
 class Basemixin(object):
     id = Column(INT, primary_key=True)
 
-    engine = create_engine('postgresql://axlamon:axlamon@localhost:5432/letsplay')
-    session = sessionmaker(bind=engine)
+    engine = create_async_engine('postgresql+asyncpg://axlamon:axlamon@localhost:5432/letsplay')
+    session = sessionmaker(bind=engine, class_=AsyncSession)
 
     @staticmethod
     def create_async_session(func):
         async def wrapper(*args, **kwargs):
-            async with Base.session() as session:
+            async with Basemixin.session() as session:
                 return await func(*args, **kwargs, session=session)
 
         return wrapper
 
     @create_async_session
-    async def save(self, session) -> None:
-        await session.add(self)
+    async def save(self, session: AsyncSession = None) -> None:
+        session.add(self)
         await session.commit()
         await session.refresh(self)
 
     @create_async_session
-    async def delete(self, session) -> None:
+    async def delete(self, session: AsyncSession = None) -> None:
         await session.delete(self)
         await session.commit()
 
@@ -69,6 +70,7 @@ class GameRole(Base):
     man_gender = Column(BOOLEAN, nullable=True)
     description = Column(VARCHAR(255), nullable=True)
     game_id = Column(INT, ForeignKey('games.id', ondelete='CASCADE'))
+    master = Column(VARCHAR(255), nullable=True)
 
 
 class Event(Base):
