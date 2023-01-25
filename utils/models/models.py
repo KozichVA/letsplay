@@ -33,12 +33,12 @@ class Basemixin(object):
 
     @classmethod
     @create_async_session
-    async def get(cls, pk: int, session):
+    async def get(cls, pk: int, session: AsyncSession = None):
         return await session.get(cls, pk)
 
     @classmethod
     @create_async_session
-    async def all(cls, order_by,  session, **kwargs):
+    async def all(cls, order_by='ID',  session: AsyncSession = None, **kwargs):
         return await session.scalars(select(cls).filter_by(kwargs).order_by(order_by))
 
 
@@ -61,7 +61,7 @@ class Game(Base, Basemixin):
     is_role_play = Column(BOOLEAN)
 
 
-class GameRole(Base):
+class GameRole(Base, Basemixin):
     __tablename__ = 'game_roles'
 
     id = Column(INT, primary_key=True)
@@ -73,7 +73,7 @@ class GameRole(Base):
     master = Column(VARCHAR(255), nullable=True)
 
 
-class Event(Base):
+class Event(Base, Basemixin):
     __tablename__ = 'events'
 
     id = Column(INT, primary_key=True)
@@ -81,14 +81,14 @@ class Event(Base):
     data_start = Column(TIMESTAMP)
 
 
-class Role(Base):
+class Role(Base, Basemixin):
     __tablename__ = 'roles'
 
     id = Column(INT, primary_key=True)
     name = Column(VARCHAR(255), nullable=True, unique=True)
 
 
-class User(Base):
+class User(Base, Basemixin):
     __tablename__ = 'users'
 
     id = Column(INT, primary_key=True)
@@ -96,7 +96,7 @@ class User(Base):
     man_gender = Column(BOOLEAN, nullable=True)
 
 
-class EventPlayer(Base):
+class EventPlayer(Base, Basemixin):
     __tablename__ = 'events_players'
 
     id = Column(INT, primary_key=True)
