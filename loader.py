@@ -1,4 +1,4 @@
-from os import  getenv
+from os import getenv
 
 from aiogram import Bot, Dispatcher
 from dotenv import load_dotenv
