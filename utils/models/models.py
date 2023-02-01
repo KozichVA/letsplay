@@ -1,21 +1,18 @@
-from sqlalchemy.orm import declarative_base, declarative_mixin, sessionmaker
-from sqlalchemy import Column, INT, ForeignKey, BOOLEAN, VARCHAR, TIMESTAMP, select
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-
-Base = declarative_base()
+from sqlalchemy import Column, SMALLINT, BIGINT, ForeignKey, BOOLEAN, VARCHAR, TIMESTAMP, select, DECIMAL
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.orm import DeclarativeBase
 
 
-@declarative_mixin
-class Basemixin(object):
-    id = Column(INT, primary_key=True)
+class Base(DeclarativeBase):
+    id = Column(SMALLINT, primary_key=True)
 
     engine = create_async_engine('postgresql+asyncpg://axlamon:axlamon@localhost:5432/letsplay')
-    session = sessionmaker(bind=engine, class_=AsyncSession)
+    session = async_sessionmaker(bind=engine)
 
     @staticmethod
     def create_async_session(func):
         async def wrapper(*args, **kwargs):
-            async with Basemixin.session() as session:
+            async with Base.session() as session:
                 return await func(*args, **kwargs, session=session)
 
         return wrapper
@@ -38,69 +35,77 @@ class Basemixin(object):
 
     @classmethod
     @create_async_session
-    async def all(cls, order_by='ID',  session: AsyncSession = None, **kwargs):
-        return await session.scalars(select(cls).filter_by(kwargs).order_by(order_by))
+    async def all(cls, order_by='id', session: AsyncSession = None, **kwargs):
+        return await session.scalars(select(cls).filter_by(**kwargs).order_by(order_by))
 
 
-class Category(Base, Basemixin):
+class Category(Base):
     __tablename__ = 'categories'
-    id = Column(INT, primary_key=True)
-    name = Column(VARCHAR(255), nullable=True, unique=True)
-    price = Column(INT, nullable=True)
+
+    name = Column(VARCHAR(255), nullable=False, unique=True)
+    price = Column(DECIMAL(8, 2), nullable=True)
 
 
-class Game(Base, Basemixin):
+class Game(Base):
     __tablename__ = 'games'
 
-    id = Column(INT, primary_key=True)
-    categpry_id = Column(INT, ForeignKey('categories.id', ondelete='CASCADE'))
-    name = Column(VARCHAR(255), nullable=True, unique=True)
-    description = Column(VARCHAR(255))
-    price = Column(INT, nullable=True)
-    player_max_count = Column(INT, nullable=True)
-    is_role_play = Column(BOOLEAN)
+    category_id = Column(SMALLINT, ForeignKey('categories.id', ondelete='CASCADE'))
+    name = Column(VARCHAR(255), nullable=False, unique=True)
+    description = Column(VARCHAR(2048))
+    price = Column(DECIMAL(8, 2), nullable=True)
+    player_max_count = Column(SMALLINT, nullable=False)
+    is_role_play = Column(BOOLEAN, default=False)
 
 
-class GameRole(Base, Basemixin):
+class Tag(Base):
+    __tablename__ = 'tags'
+
+    name = Column(VARCHAR(255), nullable=False, unique=True)
+
+
+class GameTag(Base):
+    __tablename__ = 'game_tags'
+
+    game_id = Column(SMALLINT, ForeignKey('games.id', ondelete='CASCADE'), nullable=False)
+    tag_id = Column(SMALLINT, ForeignKey('tags.id', ondelete='CASCADE'), nullable=False)
+
+
+class GameRole(Base):
     __tablename__ = 'game_roles'
 
-    id = Column(INT, primary_key=True)
-    name = Column(VARCHAR(255), nullable=True)
-    short_description = Column(VARCHAR(255))
-    man_gender = Column(BOOLEAN, nullable=True)
-    description = Column(VARCHAR(255), nullable=True)
-    game_id = Column(INT, ForeignKey('games.id', ondelete='CASCADE'))
-    master = Column(VARCHAR(255), nullable=True)
+    name = Column(VARCHAR(255), nullable=False)
+    is_man = Column(BOOLEAN, nullable=True)
+    description = Column(VARCHAR(255), nullable=False)
+    url = Column(VARCHAR(255), nullable=True)
+    game_id = Column(SMALLINT, ForeignKey('games.id', ondelete='CASCADE'), nullable=False)
+    master_url = Column(VARCHAR(255), nullable=True)
 
 
-class Event(Base, Basemixin):
+class Event(Base):
     __tablename__ = 'events'
 
-    id = Column(INT, primary_key=True)
-    game_id = Column(INT, ForeignKey('games.id', ondelete='CASCADE'))
-    data_start = Column(TIMESTAMP)
+    game_id = Column(SMALLINT, ForeignKey('games.id', ondelete='CASCADE'), nullable=False)
+    start_date = Column(TIMESTAMP, nullable=False)
 
 
-class Role(Base, Basemixin):
+class Role(Base):
     __tablename__ = 'roles'
 
-    id = Column(INT, primary_key=True)
-    name = Column(VARCHAR(255), nullable=True, unique=True)
+    name = Column(VARCHAR(10), nullable=False, unique=True)
 
 
-class User(Base, Basemixin):
+class User(Base):
     __tablename__ = 'users'
 
-    id = Column(INT, primary_key=True)
-    role_id = Column(INT, ForeignKey('roles.id', ondelete='CASCADE'))
-    man_gender = Column(BOOLEAN, nullable=True)
+    id = Column(BIGINT, primary_key=True)
+    role_id = Column(SMALLINT, ForeignKey('roles.id', ondelete='RESTRICT'), nullable=False)
+    is_man = Column(BOOLEAN, nullable=True)
 
 
-class EventPlayer(Base, Basemixin):
+class EventPlayer(Base):
     __tablename__ = 'events_players'
 
-    id = Column(INT, primary_key=True)
-    user_id = Column(INT, ForeignKey('users.id', ondelete='CASCADE'))
-    event_id = Column(INT, ForeignKey('events.id', ondelete='CASCADE'))
-    game_role_id = Column(INT, ForeignKey('game_roles.id', ondelete='CASCADE'))
-    is_reserved = Column(BOOLEAN)
+    user_id = Column(SMALLINT, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    event_id = Column(SMALLINT, ForeignKey('events.id', ondelete='CASCADE'), nullable=False)
+    game_role_id = Column(SMALLINT, ForeignKey('game_roles.id', ondelete='CASCADE'), nullable=False)
+    is_reserved = Column(BOOLEAN, default=False)

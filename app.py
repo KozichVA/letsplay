@@ -1,5 +1,5 @@
 if __name__ == '__main__':
-    from hendlers import root_router
+    from handlers import root_router
     from loader import dp, bot
 
     dp.include_router(root_router)
