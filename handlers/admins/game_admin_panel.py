@@ -12,7 +12,22 @@ from utils.models import Game
 game_panel_router = Router(name='game_panel')
 
 
-@game_panel_router.message(F.text == 'ИГРЫ')
+
+@game_panel_router.message(F.text =='Добавить настолку')
+async def get_BG_list(message: Message):
+    await message.delete()
+    await message.answer(
+        text='ВЫБЕРИТЕ ИГРУ ИЛИ ДОБАВЬТЕ НОВУЮ',
+        reply_markup=await game_list_ikb(category_id=1))
+
+@game_panel_router.message(F.text =='Добавить ролевуху')
+async def get_RPG_list(message: Message):
+    await message.delete()
+    await message.answer(
+        text='ВЫБЕРИТЕ ИГРУ ИЛИ ДОБАВЬТЕ НОВУЮ',
+        reply_markup=await game_list_ikb(category_id=2))
+
+@game_panel_router.message(F.text.lower() == 'добавить')
 async def get_categories_list(message: Message):
     await message.delete()
     await message.answer(

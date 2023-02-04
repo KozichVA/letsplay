@@ -1,7 +1,7 @@
 from aiogram import Router
 from aiogram.filters import CommandStart
 from aiogram.types import Message
-from keyboards.reply import main_panel
+from keyboards.reply import main_panel_admin
 # from utils.models import User
 
 start_router = Router(name='start')
@@ -22,4 +22,4 @@ async def command_start(message: Message):
     text = f'Добро пожаловать, @{message.from_user.full_name} 😍\n' \
            f'Приветствую тебя в клубе настольных и ролевых игр - \n\"**Let’s play**\"!  \n' \
            f'Каждую неделю мы собираемся, чтобы классно провести время! 🥳'
-    await message.answer(text=text, parse_mode='Markdown', reply_markup=main_panel)
+    await message.answer(text=text, parse_mode='Markdown', reply_markup=main_panel_admin)

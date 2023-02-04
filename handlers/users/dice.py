@@ -10,7 +10,3 @@ async def command_dice(msg: Message):
     await msg.delete()
     await msg.answer_dice()
 
-@dice_router.message(F.text == 'кубик')
-async def command_dice(msg: Message):
-    await msg.delete()
-    await msg.answer_dice()

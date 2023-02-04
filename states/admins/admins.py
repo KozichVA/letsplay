@@ -5,3 +5,4 @@ class GameAdminStatesGroup(StatesGroup):
     name = State()
     player_max_count = State()
     price = State()
+    description = State()
