@@ -12,20 +12,21 @@ from utils.models import Game
 game_panel_router = Router(name='game_panel')
 
 
-
-@game_panel_router.message(F.text =='Добавить настолку')
+@game_panel_router.message(F.text == 'Добавить настолку')
 async def get_BG_list(message: Message):
     await message.delete()
     await message.answer(
         text='ВЫБЕРИТЕ ИГРУ ИЛИ ДОБАВЬТЕ НОВУЮ',
         reply_markup=await game_list_ikb(category_id=1))
 
-@game_panel_router.message(F.text =='Добавить ролевуху')
+
+@game_panel_router.message(F.text == 'Добавить ролевуху')
 async def get_RPG_list(message: Message):
     await message.delete()
     await message.answer(
         text='ВЫБЕРИТЕ ИГРУ ИЛИ ДОБАВЬТЕ НОВУЮ',
         reply_markup=await game_list_ikb(category_id=2))
+
 
 @game_panel_router.message(F.text.lower() == 'добавить')
 async def get_categories_list(message: Message):
@@ -83,14 +84,79 @@ async def create_game(message: Message, state: FSMContext):
     except TelegramBadRequest:
         pass
     await state.update_data(name=message.text.title())
-    await state.set_state(GameAdminStatesGroup.player_max_count)
-    await message.answer(
-        text='ВВЕДИТЕ КОЛИЧЕСТВО ИГРОКОВ'
-    )
+    await state.set_state(GameAdminStatesGroup.picture)
+    await message.answer(text='ДОБАВЬТЕ КАРТИНКУ ИГРЫ:')
+
+
+@game_panel_router.message(GameAdminStatesGroup.picture)
+async def get_game_picture(message: Message, state: FSMContext):
+    await message.delete()
+    try:
+        await bot.delete_message(
+            chat_id=message.from_user.id,
+            message_id=message.message_id - 1
+        )
+    except TelegramBadRequest:
+        pass
+    try:
+        await state.update_data(name=message.photo[-1].media_id)
+    except TelegramBadRequest:
+        pass
+    await state.set_state(GameAdminStatesGroup.description)
+    await message.answer(text='ДОБАВЬТЕ ОПИСАНИЕ ИГРЫ:')
+
+
+@game_panel_router.message(GameAdminStatesGroup.description)
+async def get_game_description(message: Message, state: FSMContext):
+    await message.delete()
+    try:
+        await bot.delete_message(
+            chat_id=message.from_user.id,
+            message_id=message.message_id - 1
+        )
+    except TelegramBadRequest:
+        pass
+    await state.update_data(description=message.text.title())
+    await state.set_state(GameAdminStatesGroup.rules)
+    await message.answer(text='ДОБАВЬТЕ "pdf" ФАЙЛИК С ПРАВИЛАМИ:')
+
+
+@game_panel_router.message(GameAdminStatesGroup.rules)
+async def get_game_rules(message: Message, state: FSMContext):
+    await message.delete()
+    try:
+        await bot.delete_message(
+            chat_id=message.from_user.id,
+            message_id=message.message_id - 1
+        )
+    except TelegramBadRequest:
+        pass
+    await state.update_data(rules=message.document.file_id)
+    await state.set_state(GameAdminStatesGroup.difficulty_level)
+    await message.answer(text='ДОБАВЬТЕ УРОВЕНЬ СЛОЖНОСТИ ИГРЫ ОТ 1 ДО 10')
+
+
+@game_panel_router.message(GameAdminStatesGroup.difficulty_level)
+async def get_difficulty_level(message: Message, state: FSMContext):
+    await message.delete()
+    try:
+        await bot.delete_message(
+            chat_id=message.from_user.id,
+            message_id=message.message_id - 1
+        )
+    except TelegramBadRequest:
+        pass
+    if message.text.isdigit():
+        await state.update_data(difficulty_level=message.text)
+        await state.set_state(GameAdminStatesGroup.player_max_count)
+        await message.answer('ВВЕДИТЕ КОЛИЧЕСТВО ИГРОКОВ')
+
+    else:
+        await message.answer(text='НЕВЕРНОЕ ЗНАЧЕНИЕ, ПРОВЕРЬТЕ И ПОВТОРИТЕ')
 
 
 @game_panel_router.message(GameAdminStatesGroup.player_max_count)
-async def get_max_player_count(message: Message, state: FSMContext):
+async def get_player_max_count(message: Message, state: FSMContext):
     await message.delete()
     try:
         await bot.delete_message(
@@ -102,7 +168,10 @@ async def get_max_player_count(message: Message, state: FSMContext):
     if message.text.isdigit():
         state_data = await state.get_data()
         await state.clear()
-        game = Game(name=state_data.get('name'), category_id=state_data.get('category_id'), player_max_count=int(message.text))
+        game = Game(name=state_data.get('name'), category_id=state_data.get('category_id'),
+                    player_max_count=int(message.text), picture=state_data.get('picture'),
+                    description=state_data.get('description'), rules=state_data.get('rules'),
+                    difficulty_level=state_data.get('difficulty_level'))
         try:
             await game.save()
         except IntegrityError:
