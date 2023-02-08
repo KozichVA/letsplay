@@ -50,7 +50,7 @@ async def get_categories_list(update: Message | CallbackQuery):
 
 @game_panel_router.callback_query(GameListCallbackData.filter(F.action == 'all'))
 async def get_games_list(callback: CallbackQuery, callback_data: GameListCallbackData):
-    await callback.message.edit_text(
+    await callback.message.answer(
         text='ВЫБЕРИТЕ ИГРУ ИЛИ ДОБАВЬТЕ НОВУЮ',
         reply_markup=await game_list_ikb(callback_data.category_id)
     )
@@ -79,7 +79,8 @@ async def get_game_info(callback: CallbackQuery, callback_data: GameListCallback
 async def delete_game(callback: CallbackQuery, callback_data: GameListCallbackData):
     game = await Game.get(pk=callback_data.game_id)
     await game.delete()
-    await callback.message.edit_text(
+    await callback.message.delete()
+    await callback.message.answer(
         text=f'ИГРА ***{game.name}*** УДАЛЕНА!',
         reply_markup=await game_list_ikb(category_id=game.category_id)
     )
