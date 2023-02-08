@@ -4,12 +4,16 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from sqlalchemy.exc import IntegrityError
 
+from filters import IsAdminFilter, IsMasterFilter
 from keyboards.inline.admins import game_list_ikb, GameListCallbackData, category_list_ikb, game_detail_ikb
 from loader import bot
 from states.admins import GameAdminStatesGroup
 from utils.models import Game
 
 game_panel_router = Router(name='game_panel')
+game_panel_router.message.filter(IsAdminFilter())
+game_panel_router.callback_query.filter(IsAdminFilter())
+
 
 
 @game_panel_router.message(F.text == 'Добавить настолку')
@@ -28,13 +32,20 @@ async def get_RPG_list(message: Message):
         reply_markup=await game_list_ikb(category_id=2))
 
 
+@game_panel_router.callback_query(GameListCallbackData.filter(F.action == 'back'))
 @game_panel_router.message(F.text.lower() == 'добавить')
-async def get_categories_list(message: Message):
-    await message.delete()
-    await message.answer(
-        text='ВЫБЕРИТЕ КАТЕГОРИЮ',
-        reply_markup=await category_list_ikb()
-    )
+async def get_categories_list(update: Message | CallbackQuery):
+    if isinstance(update, Message):
+        await update.delete()
+        await update.answer(
+            text='ВЫБЕРИТЕ КАТЕГОРИЮ',
+            reply_markup=await category_list_ikb()
+        )
+    else:
+        await update.message.edit_text(
+            text='ВЫБЕРИТЕ КАТЕГОРИЮ',
+            reply_markup=await category_list_ikb()
+        )
 
 
 @game_panel_router.callback_query(GameListCallbackData.filter(F.action == 'all'))
@@ -48,10 +59,20 @@ async def get_games_list(callback: CallbackQuery, callback_data: GameListCallbac
 @game_panel_router.callback_query(GameListCallbackData.filter(F.action == 'get'))
 async def get_game_info(callback: CallbackQuery, callback_data: GameListCallbackData):
     game = await Game.get(pk=callback_data.game_id)
-    await callback.message.edit_text(
-        text=f'ИГРА ***{game.name}***',
-        reply_markup=await game_detail_ikb(game_id=game.id)
-    )
+    if game.picture:
+        await callback.message.answer_photo(
+            photo=game.picture,
+            caption=f'***{game.name}***\n{game.description}\n'
+                    f'***Число игроков:*** {game.player_max_count}\n'
+                    f'***Сложность:*** {game.difficulty_level}/10'
+                    f'\n***Правила:***'
+        )
+    if game.rules:
+        await callback.message.answer_document(
+            document=game.rules,
+            reply_markup=await game_detail_ikb(game_id=game.id)
+        )
+
 
 
 @game_panel_router.callback_query(GameListCallbackData.filter(F.action == 'del'))
@@ -98,12 +119,13 @@ async def get_game_picture(message: Message, state: FSMContext):
         )
     except TelegramBadRequest:
         pass
-    try:
-        await state.update_data(name=message.photo[-1].media_id)
-    except TelegramBadRequest:
-        pass
-    await state.set_state(GameAdminStatesGroup.description)
-    await message.answer(text='ДОБАВЬТЕ ОПИСАНИЕ ИГРЫ:')
+    if message.content_type == 'photo':
+        await state.update_data(picture=message.photo[-1].file_id)
+        await state.set_state(GameAdminStatesGroup.description)
+        text = 'Добавьте описание игры!'
+    else:
+        text = 'Это не картинка, отправь картинку, падла!'
+    await message.answer(text=text)
 
 
 @game_panel_router.message(GameAdminStatesGroup.description)
@@ -131,9 +153,12 @@ async def get_game_rules(message: Message, state: FSMContext):
         )
     except TelegramBadRequest:
         pass
-    await state.update_data(rules=message.document.file_id)
-    await state.set_state(GameAdminStatesGroup.difficulty_level)
-    await message.answer(text='ДОБАВЬТЕ УРОВЕНЬ СЛОЖНОСТИ ИГРЫ ОТ 1 ДО 10')
+    if message.content_type == 'document':
+        await state.update_data(rules=message.document.file_id)
+        await state.set_state(GameAdminStatesGroup.difficulty_level)
+        await message.answer(text='ДОБАВЬТЕ УРОВЕНЬ СЛОЖНОСТИ ИГРЫ ОТ 1 ДО 10')
+    else:
+        await message.answer(text='Это не документ')
 
 
 @game_panel_router.message(GameAdminStatesGroup.difficulty_level)
@@ -147,7 +172,7 @@ async def get_difficulty_level(message: Message, state: FSMContext):
     except TelegramBadRequest:
         pass
     if message.text.isdigit():
-        await state.update_data(difficulty_level=message.text)
+        await state.update_data(difficulty_level=int(message.text))
         await state.set_state(GameAdminStatesGroup.player_max_count)
         await message.answer('ВВЕДИТЕ КОЛИЧЕСТВО ИГРОКОВ')
 
@@ -168,10 +193,7 @@ async def get_player_max_count(message: Message, state: FSMContext):
     if message.text.isdigit():
         state_data = await state.get_data()
         await state.clear()
-        game = Game(name=state_data.get('name'), category_id=state_data.get('category_id'),
-                    player_max_count=int(message.text), picture=state_data.get('picture'),
-                    description=state_data.get('description'), rules=state_data.get('rules'),
-                    difficulty_level=state_data.get('difficulty_level'))
+        game = Game(**state_data | {'player_max_count': int(message.text)})
         try:
             await game.save()
         except IntegrityError:

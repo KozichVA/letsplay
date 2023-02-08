@@ -38,7 +38,9 @@ async def game_list_ikb(category_id: int) -> InlineKeyboardMarkup:
         [
             InlineKeyboardButton(
                 text='НАЗАД',
-                callback_data=' '
+                callback_data=GameListCallbackData(
+                    action='back'
+                ).pack()
             )
         ]
     ]
