@@ -1,7 +1,7 @@
 from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-from utils.models import Game, Category
+from utils.models import Game, Category, Tag
 
 
 class GameListCallbackData(CallbackData, prefix='gp'):
@@ -95,3 +95,68 @@ async def category_list_ikb() -> InlineKeyboardMarkup:
         for category in categories
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+async def game_edit_list_ikb(game_id: int, category_id: int):
+    buttons = [[InlineKeyboardButton(text='Название',
+                                     callback_data=GameListCallbackData(
+                                         action='edit_name',
+                                         game_id=game_id,
+                                         category_id=category_id
+                                     ).pack()),
+                InlineKeyboardButton(text='Описание',
+                                     callback_data=GameListCallbackData(
+                                         action='edit_description',
+                                         game_id=game_id,
+                                         category_id=category_id
+                                     ).pack())],
+               [InlineKeyboardButton(text='Картинка',
+                                     callback_data=GameListCallbackData(
+                                         action='edit_picture',
+                                         game_id=game_id,
+                                         category_id=category_id
+                                     ).pack()),
+                InlineKeyboardButton(text='Правила',
+                                     callback_data=GameListCallbackData(
+                                          action='edit_rules',
+                                          game_id=game_id,
+                                          category_id=category_id).pack())
+                ],
+               [InlineKeyboardButton(text='Кол-во игроков',
+                                     callback_data=GameListCallbackData(
+                                         action='edit_player_max_count',
+                                         game_id=game_id,
+                                         category_id=category_id).pack()),
+                InlineKeyboardButton(text='Сложность игры',
+                                     callback_data=GameListCallbackData(
+                                         action='edit_difficulty_level',
+                                         game_id=game_id,
+                                         category_id=category_id).pack())
+
+                ]]
+    #            if category_id == 2:
+    #                game_roles = await GameRole.all(game_id=game_id)
+    #            else:
+    #                pass
+    #             ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+async def gender_ikb():
+    InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='Мужсой'),
+                                           InlineKeyboardButton(text='Женский')]])
+
+
+async def tag_list_ikb(category_id: int, game_id: int):
+    tags = await Tag.all(order_by='name', category_id=category_id)
+    buttons = [[InlineKeyboardButton(
+                text=tag.name,
+                callback_data=GameListCallbackData(
+                    action='get_teg',
+                    game_id=game_id,
+                    category_id=category_id
+                ).pack()
+            )
+        ]
+        for tag in tags]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+

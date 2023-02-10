@@ -4,8 +4,9 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from sqlalchemy.exc import IntegrityError
 
-from filters import IsAdminFilter, IsMasterFilter
-from keyboards.inline.admins import game_list_ikb, GameListCallbackData, category_list_ikb, game_detail_ikb
+from filters import IsAdminFilter
+from keyboards.inline.admins import game_list_ikb, GameListCallbackData, category_list_ikb, game_detail_ikb,\
+    game_edit_list_ikb
 from loader import bot
 from states.admins import GameAdminStatesGroup
 from utils.models import Game
@@ -13,7 +14,6 @@ from utils.models import Game
 game_panel_router = Router(name='game_panel')
 game_panel_router.message.filter(IsAdminFilter())
 game_panel_router.callback_query.filter(IsAdminFilter())
-
 
 
 @game_panel_router.message(F.text == 'Добавить настолку')
@@ -74,7 +74,6 @@ async def get_game_info(callback: CallbackQuery, callback_data: GameListCallback
         )
 
 
-
 @game_panel_router.callback_query(GameListCallbackData.filter(F.action == 'del'))
 async def delete_game(callback: CallbackQuery, callback_data: GameListCallbackData):
     game = await Game.get(pk=callback_data.game_id)
@@ -87,7 +86,7 @@ async def delete_game(callback: CallbackQuery, callback_data: GameListCallbackDa
 
 
 @game_panel_router.callback_query(GameListCallbackData.filter(F.action == 'add'))
-async def get_new_game_name(callback: CallbackQuery, callback_data: GameListCallbackData, state: FSMContext = None):
+async def add_new_game(callback: CallbackQuery, callback_data: GameListCallbackData, state: FSMContext = None):
     await state.set_state(GameAdminStatesGroup.name)
     await state.update_data(category_id=callback_data.category_id)
     await callback.message.edit_text(
@@ -111,7 +110,7 @@ async def create_game(message: Message, state: FSMContext):
 
 
 @game_panel_router.message(GameAdminStatesGroup.picture)
-async def get_game_picture(message: Message, state: FSMContext):
+async def add_game_picture(message: Message, state: FSMContext):
     await message.delete()
     try:
         await bot.delete_message(
@@ -130,7 +129,7 @@ async def get_game_picture(message: Message, state: FSMContext):
 
 
 @game_panel_router.message(GameAdminStatesGroup.description)
-async def get_game_description(message: Message, state: FSMContext):
+async def add_game_description(message: Message, state: FSMContext):
     await message.delete()
     try:
         await bot.delete_message(
@@ -139,13 +138,13 @@ async def get_game_description(message: Message, state: FSMContext):
         )
     except TelegramBadRequest:
         pass
-    await state.update_data(description=message.text.title())
+    await state.update_data(description=message.text)
     await state.set_state(GameAdminStatesGroup.rules)
     await message.answer(text='ДОБАВЬТЕ "pdf" ФАЙЛИК С ПРАВИЛАМИ:')
 
 
 @game_panel_router.message(GameAdminStatesGroup.rules)
-async def get_game_rules(message: Message, state: FSMContext):
+async def add_game_rules(message: Message, state: FSMContext):
     await message.delete()
     try:
         await bot.delete_message(
@@ -163,7 +162,7 @@ async def get_game_rules(message: Message, state: FSMContext):
 
 
 @game_panel_router.message(GameAdminStatesGroup.difficulty_level)
-async def get_difficulty_level(message: Message, state: FSMContext):
+async def add_difficulty_level(message: Message, state: FSMContext):
     await message.delete()
     try:
         await bot.delete_message(
@@ -182,7 +181,7 @@ async def get_difficulty_level(message: Message, state: FSMContext):
 
 
 @game_panel_router.message(GameAdminStatesGroup.player_max_count)
-async def get_player_max_count(message: Message, state: FSMContext):
+async def add_player_max_count(message: Message, state: FSMContext):
     await message.delete()
     try:
         await bot.delete_message(
@@ -209,3 +208,13 @@ async def get_player_max_count(message: Message, state: FSMContext):
         await message.answer(
             text='НЕВЕРНОЕ ЗНАЧЕНИЕ, ПРОВЕРЬТЕ И ПОВТОРИТЕ'
         )
+
+
+@game_panel_router.callback_query(GameListCallbackData.filter(F.action == 'edit'))
+async def edit_game(callback: CallbackQuery, callback_data: GameListCallbackData):
+    game = await Game.get(pk=callback_data.game_id)
+    await callback.message.delete()
+    await callback.message.answer(
+        text=f'Редактируем игру {game.name}',
+        reply_markup=await game_edit_list_ikb(game_id=game.id, category_id=game.category_id)
+    )

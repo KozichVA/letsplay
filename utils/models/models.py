@@ -60,11 +60,11 @@ class Game(Base):
     difficulty_level = Column(SMALLINT)
 
 
-
 class Tag(Base):
     __tablename__ = 'tags'
 
     name = Column(VARCHAR(255), nullable=False, unique=True)
+    category_id = Column(SMALLINT, ForeignKey('categories.id', ondelete='CASCADE'))
 
 
 class GameTag(Base):
