@@ -58,6 +58,7 @@ async def get_games_list(callback: CallbackQuery, callback_data: GameListCallbac
 
 @game_panel_router.callback_query(GameListCallbackData.filter(F.action == 'get'))
 async def get_game_info(callback: CallbackQuery, callback_data: GameListCallbackData):
+    await callback.message.delete()
     game = await Game.get(pk=callback_data.game_id)
     if game.picture:
         await callback.message.answer_photo(
@@ -215,6 +216,6 @@ async def edit_game(callback: CallbackQuery, callback_data: GameListCallbackData
     game = await Game.get(pk=callback_data.game_id)
     await callback.message.delete()
     await callback.message.answer(
-        text=f'Редактируем игру {game.name}',
+        text=f'Редактируем игру ***{game.name}***',
         reply_markup=await game_edit_list_ikb(game_id=game.id, category_id=game.category_id)
     )

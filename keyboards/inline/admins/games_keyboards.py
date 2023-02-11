@@ -109,7 +109,8 @@ async def game_edit_list_ikb(game_id: int, category_id: int):
                                          action='edit_description',
                                          game_id=game_id,
                                          category_id=category_id
-                                     ).pack())],
+                                     ).pack())
+                ],
                [InlineKeyboardButton(text='Картинка',
                                      callback_data=GameListCallbackData(
                                          action='edit_picture',
@@ -121,25 +122,37 @@ async def game_edit_list_ikb(game_id: int, category_id: int):
                                           action='edit_rules',
                                           game_id=game_id,
                                           category_id=category_id).pack())
-                ],
-               [InlineKeyboardButton(text='Кол-во игроков',
+                ]]
+    if category_id == 1:
+        buttons += [[InlineKeyboardButton(text='Кол-во игроков',
+                                          callback_data=GameListCallbackData(
+                                              action='edit_player_max_count',
+                                              game_id=game_id,
+                                              category_id=category_id).pack()),
+                     InlineKeyboardButton(text='Сложность игры',
+                                          callback_data=GameListCallbackData(
+                                              action='edit_difficulty_level',
+                                              game_id=game_id,
+                                              category_id=category_id).pack())]]
+    else:
+        buttons += [[InlineKeyboardButton(text='Роли',
+                                          callback_data=GameListCallbackData(
+                                             action='get_game_role_ikb',
+                                             game_id=game_id,
+                                             category_id=category_id).pack())]]
+    buttons += [[InlineKeyboardButton(text='Тег',
                                      callback_data=GameListCallbackData(
-                                         action='edit_player_max_count',
+                                         action='edit_tag',
                                          game_id=game_id,
                                          category_id=category_id).pack()),
-                InlineKeyboardButton(text='Сложность игры',
+                InlineKeyboardButton(text='Назад',
                                      callback_data=GameListCallbackData(
-                                         action='edit_difficulty_level',
+                                         action='back_add_games',
                                          game_id=game_id,
-                                         category_id=category_id).pack())
+                                         category_id=category_id).pack())]]
 
-                ]]
-    #            if category_id == 2:
-    #                game_roles = await GameRole.all(game_id=game_id)
-    #            else:
-    #                pass
-    #             ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
+
 
 async def gender_ikb():
     InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='Мужсой'),
@@ -154,9 +167,5 @@ async def tag_list_ikb(category_id: int, game_id: int):
                     action='get_teg',
                     game_id=game_id,
                     category_id=category_id
-                ).pack()
-            )
-        ]
-        for tag in tags]
+                ).pack())] for tag in tags]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
-
