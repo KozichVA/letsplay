@@ -141,7 +141,7 @@ async def game_edit_list_ikb(game_id: int, category_id: int):
                                              game_id=game_id,
                                              category_id=category_id).pack())]]
     buttons += [[InlineKeyboardButton(text='Тег',
-                                     callback_data=GameListCallbackData(
+                                      callback_data=GameListCallbackData(
                                          action='edit_tag',
                                          game_id=game_id,
                                          category_id=category_id).pack()),
@@ -154,7 +154,7 @@ async def game_edit_list_ikb(game_id: int, category_id: int):
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-async def gender_ikb():
+async def role_gender_ikb():
     InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='Мужсой'),
                                            InlineKeyboardButton(text='Женский')]])
 
@@ -164,8 +164,12 @@ async def tag_list_ikb(category_id: int, game_id: int):
     buttons = [[InlineKeyboardButton(
                 text=tag.name,
                 callback_data=GameListCallbackData(
-                    action='get_teg',
+                    action='get_tag',
                     game_id=game_id,
                     category_id=category_id
-                ).pack())] for tag in tags]
+                ).pack())] for tag in tags] + [[InlineKeyboardButton(text='Сохрнать',
+                                                                   callback_data=GameListCallbackData(
+                                                                       action='save_tag',
+                                                                       game_id=game_id,
+                                                                       category_id=category_id).pack())]]
     return InlineKeyboardMarkup(inline_keyboard=buttons)

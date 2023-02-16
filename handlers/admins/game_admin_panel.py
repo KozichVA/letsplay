@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 
 from filters import IsAdminFilter
 from keyboards.inline.admins import game_list_ikb, GameListCallbackData, category_list_ikb, game_detail_ikb,\
-    game_edit_list_ikb
+    game_edit_list_ikb, tag_list_ikb
 from loader import bot
 from states.admins import GameAdminStatesGroup
 from utils.models import Game
@@ -141,8 +141,10 @@ async def add_game_description(message: Message, state: FSMContext):
         pass
     await state.update_data(description=message.text)
     await state.set_state(GameAdminStatesGroup.rules)
-    await message.answer(text='ДОБАВЬТЕ "pdf" ФАЙЛИК С ПРАВИЛАМИ:')
-
+    if GameAdminStatesGroup.category_id == 1:
+        await message.answer(text='ДОБАВЬТЕ "pdf" ФАЙЛИК С ПРАВИЛАМИ:')
+    else:
+        await message.answer(text='Правила ролевой игры сами добавляются и переходим к таблице с ролями')
 
 @game_panel_router.message(GameAdminStatesGroup.rules)
 async def add_game_rules(message: Message, state: FSMContext):
@@ -200,15 +202,22 @@ async def add_player_max_count(message: Message, state: FSMContext):
         except IntegrityError:
             text = 'Такая игра уже существует!'
         else:
-            text = f'ИГРА ***{game.name}*** УСПЕШНО ДОБАВЛЕНА!!!'
+            text = f'ИГРА ***{game.name}*** УСПЕШНО ДОБАВЛЕНА!!! \n Добавьте теги для фильтрации:'
         await message.answer(
             text=text,
-            reply_markup=await game_list_ikb(category_id=game.category_id)
+            reply_markup=await tag_list_ikb(category_id=game.category_id, game_id=game.id)
+            # reply_markup=await game_list_ikb(category_id=game.category_id)
         )
     else:
         await message.answer(
             text='НЕВЕРНОЕ ЗНАЧЕНИЕ, ПРОВЕРЬТЕ И ПОВТОРИТЕ'
         )
+
+
+# @game_panel_router.message(GameAdminStatesGroup.category_id, GameAdminStatesGroup.g)
+# async def add_tag(message: Message)
+#     await message.answer(text='Присвоить игре теги:',
+#                          reply_markup=await tag_list_ikb(category_id=))
 
 
 @game_panel_router.callback_query(GameListCallbackData.filter(F.action == 'edit'))
@@ -219,3 +228,10 @@ async def edit_game(callback: CallbackQuery, callback_data: GameListCallbackData
         text=f'Редактируем игру ***{game.name}***',
         reply_markup=await game_edit_list_ikb(game_id=game.id, category_id=game.category_id)
     )
+
+@game_panel_router.callback_query(GameListCallbackData.filter(F.action == 'back_add_games'))
+async def back_to_game_detail_ikb(callback: CallbackQuery, callback_data: GameListCallbackData):
+    await callback.message.delete()
+    await callback.message.answer(text='Выберите игру или добавьте новую:',
+                                  reply_markup=await game_list_ikb(category_id=callback_data.category_id))
+

@@ -9,6 +9,7 @@ class GameAdminStatesGroup(StatesGroup):
     price = State()
     difficulty_level = State()
     player_max_count = State()
+    category_id = State()
 
 
 
