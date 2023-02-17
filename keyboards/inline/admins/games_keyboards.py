@@ -1,13 +1,14 @@
 from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-from utils.models import Game, Category, Tag
+from utils.models import Game, Category, Tag, GameRole
 
 
 class GameListCallbackData(CallbackData, prefix='gp'):
     action: str = None
     game_id: int = None
     category_id: int = None
+    tag_id:int = None
 
 
 async def game_list_ikb(category_id: int) -> InlineKeyboardMarkup:
@@ -166,10 +167,40 @@ async def tag_list_ikb(category_id: int, game_id: int):
                 callback_data=GameListCallbackData(
                     action='get_tag',
                     game_id=game_id,
-                    category_id=category_id
-                ).pack())] for tag in tags] + [[InlineKeyboardButton(text='Сохрнать',
-                                                                   callback_data=GameListCallbackData(
-                                                                       action='save_tag',
-                                                                       game_id=game_id,
-                                                                       category_id=category_id).pack())]]
+                    category_id=category_id,
+                    tag_id=tag.id
+                ).pack())] for tag in tags]
+    if category_id == 1:
+        buttons += [[InlineKeyboardButton(text='Дальше',
+                                        callback_data=GameListCallbackData(
+                                            action='next',
+                                            game_id=game_id,
+                                            category_id=category_id).pack()
+                                        )]]
+
     return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+async def game_role_ikb(game_id: int):
+    roles = await GameRole.get(pk=game_id)
+    button = [[]]
+    if roles:
+        button = [[InlineKeyboardButton(text=role.name,
+                                    callback_data=GameListCallbackData(
+                                        acton='get_game_role',
+                                        game_id=game_id,
+                                        category_id=2
+                                    ).pack())] for role in roles]
+    button += [[InlineKeyboardButton(text='Добавить',
+                                    callback_data=GameListCallbackData(
+                                        action='add_game_role',
+                                        game_id=game_id,
+                                        category_id=2
+                                    ).pack())],
+              [InlineKeyboardButton(text='Назад',
+                                   callback_data=GameListCallbackData(
+                                       action='back_RPG',
+                                       game_id=game_id,
+                                       category_id=2
+                                   ).pack())]]
+    return InlineKeyboardMarkup(inline_keyboard=button)

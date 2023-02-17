@@ -54,7 +54,7 @@ class Game(Base):
     description = Column(VARCHAR(2048))
     rules = Column(VARCHAR(255))
     price = Column(DECIMAL(8, 2), nullable=True)
-    player_max_count = Column(SMALLINT, nullable=False)
+    player_max_count = Column(SMALLINT)
     is_role_play = Column(BOOLEAN, default=False)
     picture = Column(VARCHAR(255))
     difficulty_level = Column(SMALLINT)
