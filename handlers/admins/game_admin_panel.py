@@ -250,8 +250,7 @@ async def add_player_max_count(message: Message, state: FSMContext):
             text = f'ИГРА ***{game.name}*** УСПЕШНО ДОБАВЛЕНА!!! \n Добавьте теги для фильтрации:'
         await message.answer(
             text=text,
-            reply_markup=await tag_list_ikb(category_id=game.category_id, game_id=game.id)
-            # reply_markup=await game_list_ikb(category_id=game.category_id)
+            reply_markup=await game_list_ikb(category_id=game.category_id)
         )
     else:
         await message.answer(
