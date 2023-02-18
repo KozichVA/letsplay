@@ -8,7 +8,7 @@ class GameListCallbackData(CallbackData, prefix='gp'):
     action: str = None
     game_id: int = None
     category_id: int = None
-    tag_id:int = None
+    tag_id: int = None
 
 
 async def game_list_ikb(category_id: int) -> InlineKeyboardMarkup:
@@ -155,9 +155,26 @@ async def game_edit_list_ikb(game_id: int, category_id: int):
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-async def role_gender_ikb():
-    InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='Мужсой'),
-                                           InlineKeyboardButton(text='Женский')]])
+async def role_gender_ikb(game_id: int):
+    InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text='Мужсой',
+                              callback_data=GameListCallbackData(
+                                  action='men',
+                                  game_id=game_id,
+                                  category_id=2
+                              ).pack())],
+        [InlineKeyboardButton(text='Женский',
+                              callback_data=GameListCallbackData(
+                                  action='women',
+                                  game_id=game_id,
+                                  category_id=2
+                              ).pack())],
+        [InlineKeyboardButton(text='Унисекс',
+                              callback_data=GameListCallbackData(
+                                  action='sex',
+                                  game_id=game_id,
+                                  category_id=2
+                              ).pack())]])
 
 
 async def tag_list_ikb(category_id: int, game_id: int):
@@ -191,13 +208,19 @@ async def game_role_ikb(game_id: int):
                                         game_id=game_id,
                                         category_id=2
                                     ).pack())] for role in roles]
-    button += [[InlineKeyboardButton(text='Добавить',
+    button += [[InlineKeyboardButton(text='Мастерская водная',
+                                     callback_data=GameListCallbackData(
+                                         action='add_master_role',
+                                         game_id=game_id,
+                                         category_id=2
+                                     ).pack())],
+               [InlineKeyboardButton(text='Добавить',
                                     callback_data=GameListCallbackData(
                                         action='add_game_role',
                                         game_id=game_id,
                                         category_id=2
-                                    ).pack())],
-              [InlineKeyboardButton(text='Назад',
+                                    ).pack()),
+              InlineKeyboardButton(text='Назад',
                                    callback_data=GameListCallbackData(
                                        action='back_RPG',
                                        game_id=game_id,

@@ -1,3 +1,4 @@
-from .admins import GameAdminStatesGroup
+from .admins import GameAdminStatesGroup, GameRoleStatesGroup
 
-__all__ = ['GameAdminStatesGroup']
+__all__ = ['GameAdminStatesGroup',
+           'GameRoleStatesGroup']

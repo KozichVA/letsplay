@@ -6,10 +6,13 @@ class GameAdminStatesGroup(StatesGroup):
     picture = State()
     description = State()
     rules = State()
-    price = State()
     difficulty_level = State()
     player_max_count = State()
-    category_id = State()
 
+class GameRoleStatesGroup(StatesGroup):
+    role_name = State()
+    description = State()
+    gender = State()
+    url = State()
 
 

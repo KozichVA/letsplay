@@ -5,11 +5,11 @@ from aiogram.types import Message, CallbackQuery
 from sqlalchemy.exc import IntegrityError
 
 from filters import IsAdminFilter
-from keyboards.inline.admins import game_list_ikb, GameListCallbackData, category_list_ikb, game_detail_ikb,\
-    game_edit_list_ikb, tag_list_ikb, game_role_ikb
+from keyboards.inline.admins import game_list_ikb, GameListCallbackData, category_list_ikb, game_detail_ikb, \
+    game_edit_list_ikb, tag_list_ikb, game_role_ikb, role_gender_ikb
 from loader import bot
-from states.admins import GameAdminStatesGroup
-from utils.models import Game, GameTag, Tag
+from states.admins import GameAdminStatesGroup, GameRoleStatesGroup
+from utils.models import Game, GameTag, Tag, GameRole
 
 game_panel_router = Router(name='game_panel')
 game_panel_router.message.filter(IsAdminFilter())
@@ -167,6 +167,7 @@ async def get_tag(callback: CallbackQuery, callback_data: GameListCallbackData):
                                       reply_markup=await game_role_ikb(callback_data.game_id))
     else:
         game_tag = GameTag(game_id=callback_data.game_id, tag_id=callback_data.tag_id)
+        # tag_name = Tag.name
         tag_name = Tag.get(pk=callback_data.tag_id)
         try:
             await game_tag.save()
@@ -273,3 +274,63 @@ async def back_to_game_detail_ikb(callback: CallbackQuery, callback_data: GameLi
     await callback.message.delete()
     await callback.message.answer(text='Выберите игру или добавьте новую:',
                                   reply_markup=await game_list_ikb(category_id=callback_data.category_id))
+
+
+@game_panel_router.callback_query(GameListCallbackData.filter(F.action == 'add_game_role'))
+async def add_game_role(callback: CallbackQuery, state: FSMContext,):
+    await callback.message.delete()
+    await state.set_state(GameRoleStatesGroup.role_name)
+    await callback.message.answer(text='Введите имя персонажа:')
+
+
+@game_panel_router.message(GameRoleStatesGroup.role_name)
+async def add_role_name(state: FSMContext, message: Message):
+    # await message.delete()
+    await state.update_data(role_name=message.text)
+    await state.set_state(GameAdminStatesGroup.description)
+    await message.answer(text='Введите ***краткое*** описание персонажа:')
+
+
+@game_panel_router.message(GameRoleStatesGroup.description)
+async def add_role_description(state: FSMContext, message: Message, callback_data: GameListCallbackData):
+    await message.delete()
+    await state.update_data(description=message.text)
+    await state.set_state(GameRoleStatesGroup.gender)
+    await message.answer(text='Выберите пол персонажа:',
+                         reply_markup=await role_gender_ikb(game_id=callback_data.game_id))
+
+@game_panel_router.message(GameListCallbackData.filter(F.action =='men'))
+@game_panel_router.message(GameRoleStatesGroup.gender)
+async def add_gener(state: FSMContext, callback: CallbackQuery):
+    await callback.message.delete()
+    await state.set_state(GameRoleStatesGroup.url)
+    await state.update_data(url=True)
+    await callback.message.edit_text(text='Введите сылочку на роль в telegra.ph:')
+
+@game_panel_router.message(GameRoleStatesGroup.url)
+async def add_url(message: Message, state: FSMContext):
+    await message.delete()
+    try:
+        await bot.delete_message(
+            chat_id=message.from_user.id,
+            message_id=message.message_id - 1
+        )
+    except TelegramBadRequest:
+        pass
+    await state.update_data(url=message.text)
+    state_data = await state.get_data()
+    await state.clear()
+    role = GameRole(**state_data)
+    try:
+        await role.save()
+    except IntegrityError:
+        text = 'Такая игра уже существует!'
+    else:
+        text = f'ИГРА ***{role.name}*** УСПЕШНО ДОБАВЛЕНА!!!'
+    await message.answer(
+        text=text,
+        reply_markup=await game_role_ikb(game_id=GameListCallbackData.game_id))
+
+
+
+
