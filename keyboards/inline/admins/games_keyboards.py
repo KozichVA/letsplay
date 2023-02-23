@@ -11,6 +11,26 @@ class GameListCallbackData(CallbackData, prefix='gp'):
     tag_id: int = None
 
 
+async def category_list_ikb() -> InlineKeyboardMarkup:
+    categories = await Category.all()
+    buttons = [
+        [
+            InlineKeyboardButton(
+                text=category.name,
+                callback_data=GameListCallbackData(
+                    action='all',
+                    category_id=category.id
+                ).pack()
+            )
+        ]
+        for category in categories]
+    buttons += [[InlineKeyboardButton(
+                text='назад',
+                callback_data=GameListCallbackData(
+                    action='back_main_menu').pack())]]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
 async def game_list_ikb(category_id: int) -> InlineKeyboardMarkup:
     games = await Game.all(order_by='name', category_id=category_id)
     buttons = [
@@ -18,7 +38,7 @@ async def game_list_ikb(category_id: int) -> InlineKeyboardMarkup:
             InlineKeyboardButton(
                 text=game.name,
                 callback_data=GameListCallbackData(
-                    action='get',
+                    action='get_game',
                     game_id=game.id,
                     category_id=category_id
                 ).pack()
@@ -40,7 +60,7 @@ async def game_list_ikb(category_id: int) -> InlineKeyboardMarkup:
             InlineKeyboardButton(
                 text='НАЗАД',
                 callback_data=GameListCallbackData(
-                    action='back'
+                    action='back_category'
                 ).pack()
             )
         ]
@@ -77,23 +97,6 @@ async def game_detail_ikb(game_id: int) -> InlineKeyboardMarkup:
                 ).pack()
             )
         ]
-    ]
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
-
-
-async def category_list_ikb() -> InlineKeyboardMarkup:
-    categories = await Category.all()
-    buttons = [
-        [
-            InlineKeyboardButton(
-                text=category.name,
-                callback_data=GameListCallbackData(
-                    action='all',
-                    category_id=category.id
-                ).pack()
-            )
-        ]
-        for category in categories
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -140,7 +143,12 @@ async def game_edit_list_ikb(game_id: int, category_id: int):
                                           callback_data=GameListCallbackData(
                                              action='get_game_role_ikb',
                                              game_id=game_id,
-                                             category_id=category_id).pack())]]
+                                             category_id=category_id).pack()),
+                     InlineKeyboardButton(text='Стоимость',
+                                          callback_data=GameListCallbackData(
+                                              action='edit_price',
+                                              game_id=game_id,
+                                              category_id=category_id).pack())]]
     buttons += [[InlineKeyboardButton(text='Тег',
                                       callback_data=GameListCallbackData(
                                          action='edit_tag',
@@ -148,7 +156,7 @@ async def game_edit_list_ikb(game_id: int, category_id: int):
                                          category_id=category_id).pack()),
                 InlineKeyboardButton(text='Назад',
                                      callback_data=GameListCallbackData(
-                                         action='back_add_games',
+                                         action='get_game',
                                          game_id=game_id,
                                          category_id=category_id).pack())]]
 
@@ -189,11 +197,11 @@ async def tag_list_ikb(category_id: int, game_id: int):
                 ).pack())] for tag in tags]
     if category_id == 1:
         buttons += [[InlineKeyboardButton(text='Дальше',
-                                        callback_data=GameListCallbackData(
+                                          callback_data=GameListCallbackData(
                                             action='next',
                                             game_id=game_id,
                                             category_id=category_id).pack()
-                                        )]]
+                                          )]]
 
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -203,11 +211,11 @@ async def game_role_ikb(game_id: int):
     button = [[]]
     if roles:
         button = [[InlineKeyboardButton(text=role.name,
-                                    callback_data=GameListCallbackData(
-                                        acton='get_game_role',
-                                        game_id=game_id,
-                                        category_id=2
-                                    ).pack())] for role in roles]
+                                        callback_data=GameListCallbackData(
+                                            acton='get_game_role',
+                                            game_id=game_id,
+                                            category_id=2
+                                        ).pack())] for role in roles]
     button += [[InlineKeyboardButton(text='Мастерская водная',
                                      callback_data=GameListCallbackData(
                                          action='add_master_role',
@@ -215,15 +223,15 @@ async def game_role_ikb(game_id: int):
                                          category_id=2
                                      ).pack())],
                [InlineKeyboardButton(text='Добавить',
-                                    callback_data=GameListCallbackData(
-                                        action='add_game_role',
-                                        game_id=game_id,
-                                        category_id=2
-                                    ).pack()),
-              InlineKeyboardButton(text='Назад',
-                                   callback_data=GameListCallbackData(
-                                       action='back_RPG',
-                                       game_id=game_id,
-                                       category_id=2
-                                   ).pack())]]
+                                     callback_data=GameListCallbackData(
+                                         action='add_game_role',
+                                         game_id=game_id,
+                                         category_id=2
+                                     ).pack()),
+                InlineKeyboardButton(text='Назад',
+                                     callback_data=GameListCallbackData(
+                                         action='back_games_list',
+                                         game_id=game_id,
+                                         category_id=2
+                                     ).pack())]]
     return InlineKeyboardMarkup(inline_keyboard=button)

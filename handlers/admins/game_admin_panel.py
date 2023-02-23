@@ -10,6 +10,7 @@ from keyboards.inline.admins import game_list_ikb, GameListCallbackData, categor
 from loader import bot
 from states.admins import GameAdminStatesGroup, GameRoleStatesGroup
 from utils.models import Game, GameTag, Tag, GameRole
+from keyboards.inline import StartPanelCallbackData
 
 game_panel_router = Router(name='game_panel')
 game_panel_router.message.filter(IsAdminFilter())
@@ -17,7 +18,7 @@ game_panel_router.callback_query.filter(IsAdminFilter())
 
 
 @game_panel_router.message(F.text == 'Добавить настолку')
-async def get_BG_list(message: Message):
+async def get_bg_list(message: Message):
     await message.delete()
     await message.answer(
         text='ВЫБЕРИТЕ ИГРУ ИЛИ ДОБАВЬТЕ НОВУЮ',
@@ -25,7 +26,7 @@ async def get_BG_list(message: Message):
 
 
 @game_panel_router.message(F.text == 'Добавить ролевуху')
-async def get_RPG_list(message: Message):
+async def get_rpg_list(message: Message):
     await message.delete()
     await message.answer(
         text='ВЫБЕРИТЕ ИГРУ ИЛИ ДОБАВЬТЕ НОВУЮ',
@@ -33,6 +34,22 @@ async def get_RPG_list(message: Message):
 
 
 @game_panel_router.callback_query(GameListCallbackData.filter(F.action == 'back'))
+@game_panel_router.message(F.text.lower() == 'добавить')
+async def get_categories_list(update: Message | CallbackQuery):
+    if isinstance(update, Message):
+        await update.delete()
+        await update.answer(
+            text='ВЫБЕРИТЕ КАТЕГОРИЮ',
+            reply_markup=await category_list_ikb()
+        )
+    else:
+        await update.message.edit_text(
+            text='ВЫБЕРИТЕ КАТЕГОРИЮ',
+            reply_markup=await category_list_ikb()
+        )
+
+
+@game_panel_router.callback_query(StartPanelCallbackData.filter(F.action == 'add_game'))
 @game_panel_router.message(F.text.lower() == 'добавить')
 async def get_categories_list(update: Message | CallbackQuery):
     if isinstance(update, Message):
@@ -115,23 +132,7 @@ async def create_game(message: Message, state: FSMContext):
     await message.answer(text='ДОБАВЬТЕ КАРТИНКУ ИГРЫ:')
 
 
-@game_panel_router.message(GameAdminStatesGroup.picture)
-async def add_game_picture(message: Message, state: FSMContext):
-    await message.delete()
-    try:
-        await bot.delete_message(
-            chat_id=message.from_user.id,
-            message_id=message.message_id - 1
-        )
-    except TelegramBadRequest:
-        pass
-    if message.content_type == 'photo':
-        await state.update_data(picture=message.photo[-1].file_id)
-        await state.set_state(GameAdminStatesGroup.description)
-        text = 'Добавьте описание игры!'
-    else:
-        text = 'Это не картинка, отправь картинку, падла!'
-    await message.answer(text=text)
+
 
 
 @game_panel_router.message(GameAdminStatesGroup.description)
@@ -143,10 +144,16 @@ async def add_game_description(message: Message, state: FSMContext):
             message_id=message.message_id - 1
         )
     except TelegramBadRequest:
-        pass 
+        pass
     await state.update_data(description=message.text)
     state_data = await state.get_data()
-    game = Game(**state_data)
+    game = Game(
+        name=state_data.get('name'),
+        category_id=state_data.get('category_id'),
+        description=state_data.get('description')
+
+
+    )
     try:
         await game.save()
     except IntegrityError:
@@ -240,9 +247,14 @@ async def add_player_max_count(message: Message, state: FSMContext):
     except TelegramBadRequest:
         pass
     if message.text.isdigit():
+        await state.update_data(player_max_count=int(message.text))
         state_data = await state.get_data()
         await state.clear()
-        game = Game(**state_data | {'player_max_count': int(message.text)})
+        # game = Game(**state_data | {'player_max_count': int(message.text)})
+        game = Game(player_max_count=state_data.get('player_max_count'),
+                    rules=state_data.get('rules'),
+                    difficulty_level=state_data.get('difficulty_level')
+                    )
         try:
             await game.save()
         except IntegrityError:
@@ -284,28 +296,30 @@ async def add_game_role(callback: CallbackQuery, state: FSMContext,):
 
 
 @game_panel_router.message(GameRoleStatesGroup.role_name)
-async def add_role_name(state: FSMContext, message: Message):
+async def add_role_name(message: Message, state: FSMContext):
     # await message.delete()
     await state.update_data(role_name=message.text)
-    await state.set_state(GameAdminStatesGroup.description)
+    await state.set_state(GameRoleStatesGroup.role_description)
     await message.answer(text='Введите ***краткое*** описание персонажа:')
 
 
-@game_panel_router.message(GameRoleStatesGroup.description)
-async def add_role_description(state: FSMContext, message: Message, callback_data: GameListCallbackData):
+@game_panel_router.message(GameRoleStatesGroup.role_description)
+async def add_role_description(message: Message, state: FSMContext, callback_data: GameListCallbackData):
     await message.delete()
-    await state.update_data(description=message.text)
+    await state.update_data(role_description=message.text)
     await state.set_state(GameRoleStatesGroup.gender)
     await message.answer(text='Выберите пол персонажа:',
                          reply_markup=await role_gender_ikb(game_id=callback_data.game_id))
 
-@game_panel_router.message(GameListCallbackData.filter(F.action =='men'))
+
+@game_panel_router.message(GameListCallbackData.filter(F.action == 'men'))
 @game_panel_router.message(GameRoleStatesGroup.gender)
 async def add_gener(state: FSMContext, callback: CallbackQuery):
     await callback.message.delete()
     await state.set_state(GameRoleStatesGroup.url)
-    await state.update_data(url=True)
+    await state.update_data(gender=True)
     await callback.message.edit_text(text='Введите сылочку на роль в telegra.ph:')
+
 
 @game_panel_router.message(GameRoleStatesGroup.url)
 async def add_url(message: Message, state: FSMContext):
@@ -320,7 +334,10 @@ async def add_url(message: Message, state: FSMContext):
     await state.update_data(url=message.text)
     state_data = await state.get_data()
     await state.clear()
-    role = GameRole(**state_data)
+    role = GameRole(name=state_data.get('role_name'),
+                    is_man=state_data.get('gender'),
+                    description=state_data.get('role_description'),
+                    url=state_data.get('url'))
     try:
         await role.save()
     except IntegrityError:
@@ -330,7 +347,3 @@ async def add_url(message: Message, state: FSMContext):
     await message.answer(
         text=text,
         reply_markup=await game_role_ikb(game_id=GameListCallbackData.game_id))
-
-
-
-

@@ -14,10 +14,3 @@ class IsAdminFilter(Filter):
         else:
             return False
 
-class IsMasterFilter(Filter):
-    async def __call__(self, update: Message | CallbackQuery) -> Union[bool, Dict[str, Any]]:
-        user = await User.get(pk=update.from_user.id)
-        if user:
-            return user.role_id == 3
-        else:
-            return False
