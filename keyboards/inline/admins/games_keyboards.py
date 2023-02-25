@@ -9,6 +9,7 @@ class GameListCallbackData(CallbackData, prefix='gp'):
     game_id: int = None
     category_id: int = None
     tag_id: int = None
+    tag_name: str = None
 
 
 async def category_list_ikb() -> InlineKeyboardMarkup:
@@ -185,20 +186,23 @@ async def role_gender_ikb(game_id: int):
                               ).pack())]])
 
 
-async def tag_list_ikb(category_id: int, game_id: int):
+async def tag_list_ikb(category_id: int, game_id: int, state_data: dict = None) -> InlineKeyboardMarkup:
+    if state_data is None:
+        state_data = {}
     tags = await Tag.all(order_by='name', category_id=category_id)
     buttons = [[InlineKeyboardButton(
-                text=tag.name,
+                text=tag.name if tag.id not in state_data.get('tag_id', []) else tag.name + ' ✅',
                 callback_data=GameListCallbackData(
                     action='get_tag',
                     game_id=game_id,
                     category_id=category_id,
-                    tag_id=tag.id
+                    tag_id=tag.id,
+                    tag_name=tag.name
                 ).pack())] for tag in tags]
     if category_id == 1:
         buttons += [[InlineKeyboardButton(text='Дальше',
                                           callback_data=GameListCallbackData(
-                                            action='next',
+                                            action='save_tag',
                                             game_id=game_id,
                                             category_id=category_id).pack()
                                           )]]

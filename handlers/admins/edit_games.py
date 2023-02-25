@@ -2,7 +2,7 @@ from aiogram import Router, F
 from aiogram.types import CallbackQuery
 
 from keyboards.inline.admins import GameListCallbackData, game_detail_ikb, game_list_ikb, game_edit_list_ikb
-from utils.models import Game
+from utils.models import Game, GameTag, Tag
 
 edit_game_router = Router(name='edit_game')
 
@@ -19,6 +19,7 @@ async def get_game_info(callback: CallbackQuery, callback_data: GameListCallback
                     f'***Число игроков:*** {game.player_max_count}\n'
                     f'***Сложность:*** {game.difficulty_level}/10\n'
                     f'***Стоиомсть:*** {game.price}\n'
+                    f'***Теги:***: \n'
                     f'***Правила:***'
             )
         await callback.message.answer_document(
@@ -29,9 +30,10 @@ async def get_game_info(callback: CallbackQuery, callback_data: GameListCallback
             photo=game.picture,
             caption=f'***{game.name}***\n'
                     f'***Описание:*** {game.description}\n'
-                    f'***Стоиомсть:*** {game.price}\n'
+                    f'***Число игроков:*** \n'
+                    f'***Стоиомость:*** {game.price}\n'
                     f'***Как играть:*** {game.rules}\n'
-                    f'',
+                    f'***Тег:*** ',
             reply_markup=await game_detail_ikb(game_id=game.id))
 
 @edit_game_router.callback_query(GameListCallbackData.filter(F.action == 'del'))

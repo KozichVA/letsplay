@@ -20,4 +20,5 @@ class GameRoleStatesGroup(StatesGroup):
 
 
 class GameTagsStateGroup(StatesGroup):
+    tag_id = State()
     tag_name = State()

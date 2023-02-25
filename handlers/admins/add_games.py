@@ -1,14 +1,16 @@
 from aiogram import Router, F
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, callback_query, CallbackQuery
+from aiogram.types import Message, CallbackQuery
 from sqlalchemy.exc import IntegrityError
 
-from keyboards.inline.admins import game_list_ikb, category_list_ikb, GameListCallbackData, tag_list_ikb
+from keyboards.inline.admins import game_list_ikb, category_list_ikb, GameListCallbackData,\
+    tag_list_ikb, game_role_ikb, role_gender_ikb
 from keyboards.inline import StartPanelCallbackData
 from loader import bot
 from states.admins import GameAdminStatesGroup
-from utils.models import Game, Category
+from states.admins.admins import GameTagsStateGroup, GameRoleStatesGroup
+from utils.models import Game, Category, GameTag, GameRole
 
 add_games_router = Router(name='add_games')
 
@@ -198,6 +200,8 @@ async def add_player_max_count(message: Message, state: FSMContext):
             text = 'Такая игра уже существует!'
         else:
             text = f'ИГРА ***{game.name}*** УСПЕШНО ДОБАВЛЕНА!!! \n Добавьте теги для фильтрации:'
+            await state.set_state(GameTagsStateGroup.tag_id)
+            await state.update_data(tag_id=[])
         await message.answer(
             text=text,
             reply_markup=await tag_list_ikb(category_id=game.category_id, game_id=game.id))
@@ -205,15 +209,103 @@ async def add_player_max_count(message: Message, state: FSMContext):
         await message.answer(text='НЕВЕРНОЕ ЗНАЧЕНИЕ, ПРОВЕРЬТЕ И ПОВТОРИТЕ')
 
 
+@add_games_router.callback_query(GameListCallbackData.filter(F.action == 'get_tag'))
+async def get_teg(callback: CallbackQuery, callback_data: GameListCallbackData, state: FSMContext):
+    if callback_data.category_id == 2:
+        game_tag = GameTag(game_id=callback_data.game_id, tag_id=callback_data.tag_id)
+        await game_tag.save()
+        await callback.message.answer(text=f'Тег ***{callback_data.tag_name}*** добавлен! Добавить роль:',
+                                      reply_markup=await game_role_ikb(callback_data.game_id))
+    else:
+        state_data = await state.get_data()
+        if callback_data.tag_id in state_data.get('tag_id'):
+            state_data['tag_id'].remove(callback_data.tag_id)
+        else:
+            state_data['tag_id'].append(callback_data.tag_id)
+        await state.update_data(tags_id=state_data.get('tag_id'))
+        await callback.message.edit_reply_markup(
+            reply_markup=await tag_list_ikb(category_id=callback_data.category_id,
+                                            game_id=callback_data.game_id,
+                                            state_data=state_data)
+        )
 
-@add_games_router.callback_query(GameListCallbackData.filter(F.action =='get_tag'))
-async def get_teg()
+
+@add_games_router.callback_query(GameListCallbackData.filter(F.action == 'save_tag'))
+async def save_tag(callback: CallbackQuery, callback_data: GameListCallbackData, state: FSMContext):
+    state_data = await state.get_data()
+    await state.clear()
+    tags_id = state_data.get('tag_id')
+    for tag_id in tags_id:
+        game_tag = GameTag(game_id=callback_data.game_id, tag_id=tag_id)
+        try:
+            await game_tag.save()
+        except TypeError:
+            await callback.message.answer(text='Ты забыл выбрать \"Тег\",'
+                                               'поробуй ещё раз:',
+                                          reply_markup=await tag_list_ikb(category_id=callback_data.category_id,
+                                                                          game_id=callback_data.game_id))
+        else:
+            await callback.message.edit_reply_markup(text='Теги добавлены!',
+                                                     reply_markup=await game_list_ikb(
+                                                         category_id=callback_data.category_id))
 
 
+@add_games_router.callback_query(GameListCallbackData.filter(F.action == 'add_game_role'))
+async def add_game_role(callback: CallbackQuery, state: FSMContext,):
+    await callback.message.delete()
+    await state.set_state(GameRoleStatesGroup.role_name)
+    await callback.message.answer(text='Введите имя персонажа:')
 
 
+@add_games_router.message(GameRoleStatesGroup.role_name)
+async def add_role_name(message: Message, state: FSMContext):
+    # await message.delete()
+    await state.update_data(role_name=message.text)
+    await state.set_state(GameRoleStatesGroup.role_description)
+    await message.answer(text='Введите ***краткое*** описание персонажа:')
 
 
+@add_games_router.message(GameRoleStatesGroup.role_description)
+async def add_role_description(message: Message, callback_data: GameListCallbackData, state: FSMContext):
+    await message.delete()
+    await state.update_data(role_description=message.text)
+    await state.set_state(GameRoleStatesGroup.gender)
+    await message.answer(text='Выберите пол персонажа:',
+                         reply_markup=await role_gender_ikb(game_id=callback_data.game_id))
 
 
+@add_games_router.message(GameListCallbackData.filter(F.action == 'men'))
+@add_games_router.message(GameRoleStatesGroup.gender)
+async def add_gender(callback: CallbackQuery, state: FSMContext):
+    await callback.message.delete()
+    await state.set_state(GameRoleStatesGroup.url)
+    await state.update_data(gender=True)
+    await callback.message.edit_text(text='Введите сылочку на роль в telegra.ph:')
 
+
+@add_games_router.message(GameRoleStatesGroup.url)
+async def add_url(message: Message, state: FSMContext):
+    await message.delete()
+    try:
+        await bot.delete_message(
+            chat_id=message.from_user.id,
+            message_id=message.message_id - 1
+        )
+    except TelegramBadRequest:
+        pass
+    await state.update_data(url=message.text)
+    state_data = await state.get_data()
+    await state.clear()
+    role = GameRole(name=state_data.get('role_name'),
+                    is_man=state_data.get('gender'),
+                    description=state_data.get('role_description'),
+                    url=state_data.get('url'))
+    try:
+        await role.save()
+    except IntegrityError:
+        text = 'Такой персонаж уже существует!'
+    else:
+        text = f'РОЛЬ ***{role.name}*** УСПЕШНО ДОБАВЛЕНА!!!'
+    await message.answer(
+        text=text,
+        reply_markup=await game_role_ikb(game_id=GameListCallbackData.game_id))
