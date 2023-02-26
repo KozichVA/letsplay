@@ -13,6 +13,7 @@ class GameAdminStatesGroup(StatesGroup):
 
 
 class GameRoleStatesGroup(StatesGroup):
+    game_id = State()
     role_name = State()
     role_description = State()
     gender = State()

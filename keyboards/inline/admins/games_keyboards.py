@@ -164,28 +164,6 @@ async def game_edit_list_ikb(game_id: int, category_id: int):
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-async def role_gender_ikb(game_id: int):
-    InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text='Мужсой',
-                              callback_data=GameListCallbackData(
-                                  action='men',
-                                  game_id=game_id,
-                                  category_id=2
-                              ).pack())],
-        [InlineKeyboardButton(text='Женский',
-                              callback_data=GameListCallbackData(
-                                  action='women',
-                                  game_id=game_id,
-                                  category_id=2
-                              ).pack())],
-        [InlineKeyboardButton(text='Унисекс',
-                              callback_data=GameListCallbackData(
-                                  action='sex',
-                                  game_id=game_id,
-                                  category_id=2
-                              ).pack())]])
-
-
 async def tag_list_ikb(category_id: int, game_id: int, state_data: dict = None) -> InlineKeyboardMarkup:
     if state_data is None:
         state_data = {}
@@ -239,3 +217,25 @@ async def game_role_ikb(game_id: int):
                                          category_id=2
                                      ).pack())]]
     return InlineKeyboardMarkup(inline_keyboard=button)
+
+
+async def role_gender_ikb(game_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text='Мужсой',
+                              callback_data=GameListCallbackData(
+                                  action='men',
+                                  game_id=game_id,
+                                  category_id=2
+                              ).pack())],
+        [InlineKeyboardButton(text='Женский',
+                              callback_data=GameListCallbackData(
+                                  action='women',
+                                  game_id=game_id,
+                                  category_id=2
+                              ).pack())],
+        [InlineKeyboardButton(text='Унисекс',
+                              callback_data=GameListCallbackData(
+                                  action='sex',
+                                  game_id=game_id,
+                                  category_id=2
+                              ).pack())]])

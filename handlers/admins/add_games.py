@@ -251,8 +251,10 @@ async def save_tag(callback: CallbackQuery, callback_data: GameListCallbackData,
 
 
 @add_games_router.callback_query(GameListCallbackData.filter(F.action == 'add_game_role'))
-async def add_game_role(callback: CallbackQuery, state: FSMContext,):
+async def add_game_role(callback: CallbackQuery, callback_data: GameListCallbackData, state: FSMContext,):
     await callback.message.delete()
+    await state.set_state(GameRoleStatesGroup.game_id)
+    await state.update_data(game_id=callback_data.game_id)
     await state.set_state(GameRoleStatesGroup.role_name)
     await callback.message.answer(text='Введите имя персонажа:')
 
@@ -266,21 +268,22 @@ async def add_role_name(message: Message, state: FSMContext):
 
 
 @add_games_router.message(GameRoleStatesGroup.role_description)
-async def add_role_description(message: Message, callback_data: GameListCallbackData, state: FSMContext):
+async def add_role_description(message: Message, state: FSMContext):
     await message.delete()
     await state.update_data(role_description=message.text)
     await state.set_state(GameRoleStatesGroup.gender)
-    await message.answer(text='Выберите пол персонажа:',
-                         reply_markup=await role_gender_ikb(game_id=callback_data.game_id))
+    state_data = await state.get_data()
+    await message.answer(text='Выберите пол персонажа, если это важно:',
+                         reply_markup=await role_gender_ikb(game_id=state_data.get('game_id')))
 
 
-@add_games_router.message(GameListCallbackData.filter(F.action == 'men'))
-@add_games_router.message(GameRoleStatesGroup.gender)
+@add_games_router.callback_query(GameListCallbackData.filter(F.action == 'men'))
+@add_games_router.callback_query(GameRoleStatesGroup.gender)
 async def add_gender(callback: CallbackQuery, state: FSMContext):
     await callback.message.delete()
-    await state.set_state(GameRoleStatesGroup.url)
     await state.update_data(gender=True)
-    await callback.message.edit_text(text='Введите сылочку на роль в telegra.ph:')
+    await state.set_state(GameRoleStatesGroup.url)
+    await callback.message.answer(text='Введите сылочку на роль в telegra.ph:')
 
 
 @add_games_router.message(GameRoleStatesGroup.url)
@@ -308,4 +311,4 @@ async def add_url(message: Message, state: FSMContext):
         text = f'РОЛЬ ***{role.name}*** УСПЕШНО ДОБАВЛЕНА!!!'
     await message.answer(
         text=text,
-        reply_markup=await game_role_ikb(game_id=GameListCallbackData.game_id))
+        reply_markup=await game_role_ikb(game_id=state_data.get('game_id')))
