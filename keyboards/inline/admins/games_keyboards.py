@@ -10,6 +10,7 @@ class GameListCallbackData(CallbackData, prefix='gp'):
     category_id: int = None
     tag_id: int = None
     tag_name: str = None
+    role_id: int = None
 
 
 async def category_list_ikb() -> InlineKeyboardMarkup:
@@ -105,7 +106,7 @@ async def game_detail_ikb(game_id: int) -> InlineKeyboardMarkup:
 async def game_edit_list_ikb(game_id: int, category_id: int):
     buttons = [[InlineKeyboardButton(text='Название',
                                      callback_data=GameListCallbackData(
-                                         action='edit_name',
+                                         action='edit_game_name',
                                          game_id=game_id,
                                          category_id=category_id
                                      ).pack()),
@@ -189,14 +190,15 @@ async def tag_list_ikb(category_id: int, game_id: int, state_data: dict = None) 
 
 
 async def game_role_ikb(game_id: int):
-    roles = await GameRole.get(pk=game_id)
+    roles = await GameRole.all(game_id=game_id)
     button = [[]]
     if roles:
         button = [[InlineKeyboardButton(text=role.name,
                                         callback_data=GameListCallbackData(
-                                            acton='get_game_role',
+                                            action='get_game_role',
                                             game_id=game_id,
-                                            category_id=2
+                                            category_id=2,
+                                            role_id=role.id
                                         ).pack())] for role in roles]
     button += [[InlineKeyboardButton(text='Мастерская водная',
                                      callback_data=GameListCallbackData(
@@ -239,3 +241,40 @@ async def role_gender_ikb(game_id: int) -> InlineKeyboardMarkup:
                                   game_id=game_id,
                                   category_id=2
                               ).pack())]])
+
+
+async def role_detail_ikb(role_id: int) -> InlineKeyboardMarkup:
+    role = await GameRole.get(pk=role_id)
+    buttons = [
+        [
+            InlineKeyboardButton(
+                text='РЕДАКТИРОВАТЬ',
+                callback_data=GameListCallbackData(
+                    action='edit_role',
+                    role_id=role.id,
+                    category_id=2,
+                    game_id=role.game_id
+                ).pack()
+            ),
+            InlineKeyboardButton(
+                text='УДАЛИТЬ',
+                callback_data=GameListCallbackData(
+                    action='del_role',
+                    game_id=role.game_id,
+                    role_id=role.id
+                ).pack()
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text='НАЗАД',
+                callback_data=GameListCallbackData(
+                    action='get_game_role_ikb',
+                    category_id=2,
+                    game_id=role.game_id,
+                    role_id=role.id
+                ).pack()
+            )
+        ]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)

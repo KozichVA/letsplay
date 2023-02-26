@@ -57,6 +57,7 @@ class Game(Base):
     price = Column(DECIMAL(8, 2), nullable=True)
     player_max_count = Column(SMALLINT)
     difficulty_level = Column(SMALLINT)
+    master_url = Column(VARCHAR(255), nullable=True)
 
 
 class Tag(Base):
@@ -81,7 +82,7 @@ class GameRole(Base):
     description = Column(VARCHAR(255), nullable=False)
     url = Column(VARCHAR(255), nullable=True)
     game_id = Column(SMALLINT, ForeignKey('games.id', ondelete='CASCADE'), nullable=False)
-    master_url = Column(VARCHAR(255), nullable=True)
+
 
 
 class Event(Base):

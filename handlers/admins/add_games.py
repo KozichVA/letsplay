@@ -278,37 +278,47 @@ async def add_role_description(message: Message, state: FSMContext):
 
 
 @add_games_router.callback_query(GameListCallbackData.filter(F.action == 'men'))
-@add_games_router.callback_query(GameRoleStatesGroup.gender)
 async def add_gender(callback: CallbackQuery, state: FSMContext):
     await callback.message.delete()
     await state.update_data(gender=True)
     await state.set_state(GameRoleStatesGroup.url)
-    await callback.message.answer(text='Введите сылочку на роль в telegra.ph:')
+    await callback.message.answer(text='Добавили мужика.\nВведите сылочку на роль в telegra.ph:')
+
+
+@add_games_router. callback_query(GameListCallbackData.filter(F.action == 'women'))
+async def add_gender(callback: CallbackQuery, state: FSMContext):
+    await callback.message.delete()
+    await state.update_data(gender=False)
+    await state.set_state(GameRoleStatesGroup.url)
+    await callback.message.answer(text='Добавили жещину.\nВведите сылочку на роль в telegra.ph:')
+
+
+@add_games_router.callback_query(GameListCallbackData.filter(F.action == 'sex'))
+async def add_gender(callback: CallbackQuery, state: FSMContext):
+    await callback.message.delete()
+    await state.update_data(gender=None)
+    await state.set_state(GameRoleStatesGroup.url)
+    await callback.message.answer(text='Добавили гемофродита.\nВведите сылочку на роль в telegra.ph:')
 
 
 @add_games_router.message(GameRoleStatesGroup.url)
 async def add_url(message: Message, state: FSMContext):
     await message.delete()
-    try:
-        await bot.delete_message(
-            chat_id=message.from_user.id,
-            message_id=message.message_id - 1
-        )
-    except TelegramBadRequest:
-        pass
     await state.update_data(url=message.text)
     state_data = await state.get_data()
     await state.clear()
     role = GameRole(name=state_data.get('role_name'),
                     is_man=state_data.get('gender'),
                     description=state_data.get('role_description'),
-                    url=state_data.get('url'))
+                    url=state_data.get('url'),
+                    game_id=state_data.get('game_id'))
+
     try:
         await role.save()
     except IntegrityError:
-        text = 'Такой персонаж уже существует!'
+        text = f'Персонаж ***{role.name}*** уже существует!, {role.description}, {role.is_man}, {role.url}'
     else:
         text = f'РОЛЬ ***{role.name}*** УСПЕШНО ДОБАВЛЕНА!!!'
     await message.answer(
         text=text,
-        reply_markup=await game_role_ikb(game_id=state_data.get('game_id')))
+        reply_markup=await game_role_ikb(game_id=role.game_id))
