@@ -80,7 +80,7 @@ async def add_new_game_name(message: Message, state: FSMContext):
     old_name = game.name
     game.name = message.text
     await game.save()
-    await message.answer(text=f'Название игры ***{old_name}*** измененно на {game.name}',
+    await message.answer(text=f'Название игры ***{old_name}*** измененно на ***{game.name}***',
                          reply_markup=await game_edit_list_ikb(game_id=game.id, category_id=game.category_id))
 
 
@@ -105,7 +105,6 @@ async def add_new_game_description(message: Message, state: FSMContext):
     await game.save()
     await message.answer(text=f'Описание игры ***{game.name}*** успешно сохранено.',
                          reply_markup=await game_edit_list_ikb(game_id=game.id, category_id=game.category_id))
-
 
 
 @edit_game_router.callback_query(GameListCallbackData.filter(F.action == 'get_game_role_ikb'))
