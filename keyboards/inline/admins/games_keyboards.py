@@ -278,3 +278,23 @@ async def role_detail_ikb(role_id: int) -> InlineKeyboardMarkup:
         ]
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+async def category_list_price_ikb() -> InlineKeyboardMarkup:
+    categories = await Category.all()
+    buttons = [
+        [
+            InlineKeyboardButton(
+                text=category.name,
+                callback_data=GameListCallbackData(
+                    action='edit_category_price',
+                    category_id=category.id
+                ).pack()
+            )
+        ]
+        for category in categories]
+    buttons += [[InlineKeyboardButton(
+                text='назад',
+                callback_data=GameListCallbackData(
+                    action='back_main_menu').pack())]]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
