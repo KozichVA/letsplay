@@ -94,7 +94,7 @@ async def game_detail_ikb(game_id: int) -> InlineKeyboardMarkup:
             InlineKeyboardButton(
                 text='НАЗАД',
                 callback_data=GameListCallbackData(
-                    action='all',
+                    action='back_games_list',
                     category_id=game.category_id
                 ).pack()
             )
@@ -214,7 +214,7 @@ async def game_role_ikb(game_id: int):
                                      ).pack()),
                 InlineKeyboardButton(text='Назад',
                                      callback_data=GameListCallbackData(
-                                         action='back_games_list',
+                                         action='back_game_list',
                                          game_id=game_id,
                                          category_id=2
                                      ).pack())]]
@@ -269,7 +269,7 @@ async def role_detail_ikb(role_id: int) -> InlineKeyboardMarkup:
             InlineKeyboardButton(
                 text='НАЗАД',
                 callback_data=GameListCallbackData(
-                    action='get_game_role_ikb',
+                    action='back_game_role_ikb',
                     category_id=2,
                     game_id=role.game_id,
                     role_id=role.id

@@ -43,7 +43,7 @@ async def get_games_list(callback: CallbackQuery, callback_data: GameListCallbac
 @add_games_router.message(F.text == 'Добавить игру')
 async def get_categories_list(update: Message | CallbackQuery):
     if update.from_user.id == 3:
-        await update.answer(text='ВЫБЕРИТЕ ИГРУ ИЛИ ДОБАВЬТЕ НОВУЮ',
+        await update.message.edit_text(text='ВЫБЕРИТЕ ИГРУ ИЛИ ДОБАВЬТЕ НОВУЮ',
                             reply_markup=await game_list_ikb(category_id=2))
     else:
         if isinstance(update, Message):
@@ -223,7 +223,6 @@ async def get_teg(callback: CallbackQuery, callback_data: GameListCallbackData, 
             state_data['tag_id'].remove(callback_data.tag_id)
         else:
             state_data['tag_id'].append(callback_data.tag_id)
-        print(state_data.get('tag_id'))
         await state.update_data(tags_id=state_data.get('tag_id'))
         await callback.message.edit_reply_markup(
             reply_markup=await tag_list_ikb(category_id=callback_data.category_id,
@@ -234,31 +233,25 @@ async def get_teg(callback: CallbackQuery, callback_data: GameListCallbackData, 
 
 @add_games_router.callback_query(GameListCallbackData.filter(F.action == 'save_tag'))
 async def save_tag(callback: CallbackQuery, callback_data: GameListCallbackData, state: FSMContext):
-    print('save_tag')
-    print(callback.message.reply_markup)
     state_data = await state.get_data()
-    await state.clear()
     tags_id = state_data.get('tag_id')
-    print(tags_id)
-    for tag_id in tags_id:
-        print(tags_id)
-        game_tag = GameTag(game_id=callback_data.game_id, tag_id=tag_id)
-        # try:
-        await game_tag.save()
-        print(game_tag.id)
-        # except TypeError:
-        #     pass
-            # await callback.message.answer(text='Ты забыл выбрать \"Тег\",'
-            #                                    'поробуй ещё раз:',
-            #                               reply_markup=await tag_list_ikb(category_id=callback_data.category_id,
-            #                                                               game_id=callback_data.game_id))
-        # else:
-    await callback.message.edit_text(
-        text='Теги добавлены!',
-        reply_markup=await game_list_ikb(
-            category_id=callback_data.category_id
+    if tags_id:
+        await state.clear()
+        for tag_id in tags_id:
+            game_tag = GameTag(game_id=callback_data.game_id, tag_id=tag_id)
+            await game_tag.save()
+
+        await callback.message.edit_text(
+            text='Теги добавлены!',
+            reply_markup=await game_list_ikb(
+                category_id=callback_data.category_id
+            )
         )
-    )
+    else:
+        await callback.message.answer(text='Ты забыл выбрать ***\"Тег\"***,'
+                                           'поробуй ещё раз:',
+                                      reply_markup=await tag_list_ikb(category_id=callback_data.category_id,
+                                                                      game_id=callback_data.game_id))
 
 
 @add_games_router.callback_query(GameListCallbackData.filter(F.action == 'add_game_role'))
@@ -272,7 +265,14 @@ async def add_game_role(callback: CallbackQuery, callback_data: GameListCallback
 
 @add_games_router.message(GameRoleStatesGroup.role_name)
 async def add_role_name(message: Message, state: FSMContext):
-    # await message.delete()
+    try:
+        await bot.delete_message(
+            chat_id=message.from_user.id,
+            message_id=message.message_id - 1
+        )
+    except TelegramBadRequest:
+        pass
+    await message.delete()
     await state.update_data(role_name=message.text)
     await state.set_state(GameRoleStatesGroup.role_description)
     await message.answer(text='Введите ***краткое*** описание персонажа:')
@@ -293,7 +293,7 @@ async def add_gender(callback: CallbackQuery, state: FSMContext):
     await callback.message.delete()
     await state.update_data(gender=True)
     await state.set_state(GameRoleStatesGroup.url)
-    await callback.message.answer(text='Добавили мужика.\nВведите сылочку на роль в telegra.ph:')
+    await callback.message.edit_text(text='Добавили мужика.\nВведите сылочку на роль в telegra.ph:')
 
 
 @add_games_router.callback_query(GameListCallbackData.filter(F.action == 'women'))
@@ -301,7 +301,7 @@ async def add_gender(callback: CallbackQuery, state: FSMContext):
     await callback.message.delete()
     await state.update_data(gender=False)
     await state.set_state(GameRoleStatesGroup.url)
-    await callback.message.answer(text='Добавили жещину.\nВведите сылочку на роль в telegra.ph:')
+    await callback.message.edit_text(text='Добавили жещину.\nВведите сылочку на роль в telegra.ph:')
 
 
 @add_games_router.callback_query(GameListCallbackData.filter(F.action == 'sex'))
@@ -309,7 +309,7 @@ async def add_gender(callback: CallbackQuery, state: FSMContext):
     await callback.message.delete()
     await state.update_data(gender=None)
     await state.set_state(GameRoleStatesGroup.url)
-    await callback.message.answer(text='Добавили гемофродита.\nВведите сылочку на роль в telegra.ph:')
+    await callback.message.edit_text(text='Добавили гемофродита.\nВведите сылочку на роль в telegra.ph:')
 
 
 @add_games_router.message(GameRoleStatesGroup.url)

@@ -1,10 +1,12 @@
 from aiogram import Router, F
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import CallbackQuery, Message
 from aiogram.fsm.context import FSMContext
 
 from keyboards.inline.admins import GameListCallbackData, game_detail_ikb, game_list_ikb, game_edit_list_ikb, \
     game_role_ikb
 from keyboards.inline.admins.games_keyboards import role_detail_ikb
+from loader import bot
 from states.admins.admins import GameAdminStatesGroup
 from utils.models import Game, GameRole, Tag, GameTag
 
@@ -76,6 +78,13 @@ async def edit_game_name(callback: CallbackQuery, callback_data: GameListCallbac
 
 @edit_game_router.message(GameAdminStatesGroup.game_id)
 async def add_new_game_name(message: Message, state: FSMContext):
+    try:
+        await bot.delete_message(
+            chat_id=message.from_user.id,
+            message_id=message.message_id - 1
+        )
+    except TelegramBadRequest:
+        pass
     await message.delete()
     state_data = await state.get_data()
     await state.clear()
@@ -88,6 +97,7 @@ async def add_new_game_name(message: Message, state: FSMContext):
         await state.clear()
         await message.answer(text=f'Название игры ***{old_name}*** измененно на ***{game.name}***',
                              reply_markup=await game_edit_list_ikb(game_id=game.id, category_id=game.category_id))
+    # --------------------------------------------------------------------------------------------------------------
     elif state_data.get('edit') == 'description':
         old_description = game.description
         game.description = message.text
@@ -96,16 +106,16 @@ async def add_new_game_name(message: Message, state: FSMContext):
         await message.answer(text=f'Описание игры ***{old_description}*** измененно на ***{game.description}***',
                              reply_markup=await game_edit_list_ikb(game_id=game.id, category_id=game.category_id))
 
-# @edit_game_router.callback_query(GameListCallbackData.filter(F.action == 'edit_description'))
-# async def edit_game_description(callback: CallbackQuery, callback_data: GameListCallbackData, state: FSMContext):
-#     await callback.message.delete()
-#     game = await Game.get(pk=callback_data.game_id)
-#     await state.set_state(GameAdminStatesGroup.game_id)
-#     await state.update_data(game_id=game.id)
-#     await callback.message.answer(text=f'Меняем описание игры ***{game.name}***\n'
-#                                        f'Введите новое описание:')
-#
-#
+@edit_game_router.callback_query(GameListCallbackData.filter(F.action == 'edit_description'))
+async def edit_game_description(callback: CallbackQuery, callback_data: GameListCallbackData, state: FSMContext):
+    await callback.message.delete()
+    game = await Game.get(pk=callback_data.game_id)
+    await state.set_state(GameAdminStatesGroup.game_id)
+    await state.update_data(game_id=game.id)
+    await callback.message.answer(text=f'Меняем описание игры ***{game.name}***\n'
+                                       f'Введите новое описание:')
+
+
 # @edit_game_router.message(GameAdminStatesGroup.game_id)
 # async def add_new_game_description(message: Message, state: FSMContext):
 #     await message.delete()
@@ -121,7 +131,7 @@ async def add_new_game_name(message: Message, state: FSMContext):
 
 @edit_game_router.callback_query(GameListCallbackData.filter(F.action == 'get_game_role_ikb'))
 async def edit_game(callback: CallbackQuery, callback_data: GameListCallbackData):
-    await callback.message.answer(text='Добавь роль:',
+    await callback.message.edit_text(text='Выбери или добавь \"роль:\"',
                                   reply_markup=await game_role_ikb(game_id=callback_data.game_id))
 
 
@@ -143,7 +153,7 @@ async def get_game_role(callback: CallbackQuery, callback_data: GameListCallback
 
 
 @edit_game_router.callback_query(GameListCallbackData.filter(F.action == 'del_role'))
-async def delete_game(callback: CallbackQuery, callback_data: GameListCallbackData):
+async def delete_role(callback: CallbackQuery, callback_data: GameListCallbackData):
     role = await GameRole.get(pk=callback_data.role_id)
     await role.delete()
     await callback.message.delete()
