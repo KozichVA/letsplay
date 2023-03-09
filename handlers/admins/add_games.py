@@ -44,7 +44,7 @@ async def get_games_list(callback: CallbackQuery, callback_data: GameListCallbac
 async def get_categories_list(update: Message | CallbackQuery):
     if update.from_user.id == 3:
         await update.message.edit_text(text='ВЫБЕРИТЕ ИГРУ ИЛИ ДОБАВЬТЕ НОВУЮ',
-                            reply_markup=await game_list_ikb(category_id=2))
+                                       reply_markup=await game_list_ikb(category_id=2))
     else:
         if isinstance(update, Message):
             await update.delete()
@@ -280,6 +280,13 @@ async def add_role_name(message: Message, state: FSMContext):
 
 @add_games_router.message(GameRoleStatesGroup.role_description)
 async def add_role_description(message: Message, state: FSMContext):
+    try:
+        await bot.delete_message(
+            chat_id=message.from_user.id,
+            message_id=message.message_id - 1
+        )
+    except TelegramBadRequest:
+        pass
     await message.delete()
     await state.update_data(role_description=message.text)
     await state.set_state(GameRoleStatesGroup.gender)
@@ -293,7 +300,7 @@ async def add_gender(callback: CallbackQuery, state: FSMContext):
     await callback.message.delete()
     await state.update_data(gender=True)
     await state.set_state(GameRoleStatesGroup.url)
-    await callback.message.edit_text(text='Добавили мужика.\nВведите сылочку на роль в telegra.ph:')
+    await callback.message.answer(text='Добавили мужика.\nВведите сылочку на роль в telegra.ph:')
 
 
 @add_games_router.callback_query(GameListCallbackData.filter(F.action == 'women'))
@@ -301,7 +308,7 @@ async def add_gender(callback: CallbackQuery, state: FSMContext):
     await callback.message.delete()
     await state.update_data(gender=False)
     await state.set_state(GameRoleStatesGroup.url)
-    await callback.message.edit_text(text='Добавили жещину.\nВведите сылочку на роль в telegra.ph:')
+    await callback.message.answer(text='Добавили жещину.\nВведите сылочку на роль в telegra.ph:')
 
 
 @add_games_router.callback_query(GameListCallbackData.filter(F.action == 'sex'))
@@ -309,11 +316,18 @@ async def add_gender(callback: CallbackQuery, state: FSMContext):
     await callback.message.delete()
     await state.update_data(gender=None)
     await state.set_state(GameRoleStatesGroup.url)
-    await callback.message.edit_text(text='Добавили гемофродита.\nВведите сылочку на роль в telegra.ph:')
+    await callback.message.answer(text='Добавили гемофродита.\nВведите сылочку на роль в telegra.ph:')
 
 
 @add_games_router.message(GameRoleStatesGroup.url)
 async def add_url(message: Message, state: FSMContext):
+    try:
+        await bot.delete_message(
+            chat_id=message.from_user.id,
+            message_id=message.message_id - 1
+        )
+    except TelegramBadRequest:
+        pass
     await message.delete()
     await state.update_data(url=message.text)
     state_data = await state.get_data()
@@ -333,3 +347,30 @@ async def add_url(message: Message, state: FSMContext):
     await message.answer(
         text=text,
         reply_markup=await game_role_ikb(game_id=role.game_id))
+
+
+@add_games_router.callback_query(GameListCallbackData.filter(F.action == 'add_master_role'))
+async def add_master_url(callback: CallbackQuery, callback_data: GameListCallbackData, state: FSMContext):
+    await callback.message.delete()
+    await state.set_state('game_id')
+    await state.update_data(game_id=callback_data.game_id)
+    await callback.message.answer(text='Введите сылочку на мастерскую вводную:')
+
+
+# @add_games_router.message(GameAdminStatesGroup.game_id)
+# async def save_master_url(message: Message, state: FSMContext):
+#     try:
+#         await bot.delete_message(
+#             chat_id=message.from_user.id,
+#             message_id=message.message_id - 1
+#         )
+#     except TelegramBadRequest:
+#         pass
+#     await message.delete()
+#     state_data = await state.get_data()
+#     await state.clear()
+#     game = await Game.get(pk=state_data.get('game_id'))
+#     game.master_url = message.text
+#     await game.save()
+#     await message.answer(text='Мастерская вводная сохранена:',
+#                             reply_markup=await game_role_ikb(game_id=game.id))
