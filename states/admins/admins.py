@@ -11,6 +11,7 @@ class GameAdminStatesGroup(StatesGroup):
     difficulty_level = State()
     player_max_count = State()
     game_id = State()
+    edit = State()
 
 class GameRoleStatesGroup(StatesGroup):
     game_id = State()

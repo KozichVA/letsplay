@@ -102,7 +102,6 @@ async def add_game_picture(message: Message, state: FSMContext):
 
 @add_games_router.message(GameAdminStatesGroup.description)
 async def add_game_description(message: Message, state: FSMContext):
-    print('add_game_description')
     await message.delete()
     try:
         await bot.delete_message(
@@ -215,8 +214,8 @@ async def get_teg(callback: CallbackQuery, callback_data: GameListCallbackData, 
     if callback_data.category_id == 2:
         game_tag = GameTag(game_id=callback_data.game_id, tag_id=callback_data.tag_id)
         await game_tag.save()
-        await callback.message.answer(text=f'Тег ***{callback_data.tag_name}*** добавлен! Добавить роль:',
-                                      reply_markup=await game_role_ikb(callback_data.game_id))
+        await callback.message.edit_text(text=f'Тег ***{callback_data.tag_name}*** добавлен! Добавить роль:',
+                                         reply_markup=await game_role_ikb(callback_data.game_id))
     else:
         state_data = await state.get_data()
         if callback_data.tag_id in state_data.get('tag_id'):
@@ -344,33 +343,14 @@ async def add_url(message: Message, state: FSMContext):
         text = f'Персонаж ***{role.name}*** уже существует!, {role.description}, {role.is_man}, {role.url}'
     else:
         text = f'РОЛЬ ***{role.name}*** УСПЕШНО ДОБАВЛЕНА!!!'
+        roles = await GameRole.all(game_id=state_data.get('game_id'))
+        player_max_count = []
+        for i in roles:
+            player_max_count.append(i)
+        game = await Game.get(pk=state_data.get('game_id'))
+        game.player_max_count = len(player_max_count)
+        await game.save()
     await message.answer(
         text=text,
         reply_markup=await game_role_ikb(game_id=role.game_id))
 
-
-@add_games_router.callback_query(GameListCallbackData.filter(F.action == 'add_master_role'))
-async def add_master_url(callback: CallbackQuery, callback_data: GameListCallbackData, state: FSMContext):
-    await callback.message.delete()
-    await state.set_state('game_id')
-    await state.update_data(game_id=callback_data.game_id)
-    await callback.message.answer(text='Введите сылочку на мастерскую вводную:')
-
-
-# @add_games_router.message(GameAdminStatesGroup.game_id)
-# async def save_master_url(message: Message, state: FSMContext):
-#     try:
-#         await bot.delete_message(
-#             chat_id=message.from_user.id,
-#             message_id=message.message_id - 1
-#         )
-#     except TelegramBadRequest:
-#         pass
-#     await message.delete()
-#     state_data = await state.get_data()
-#     await state.clear()
-#     game = await Game.get(pk=state_data.get('game_id'))
-#     game.master_url = message.text
-#     await game.save()
-#     await message.answer(text='Мастерская вводная сохранена:',
-#                             reply_markup=await game_role_ikb(game_id=game.id))

@@ -7,7 +7,7 @@ from keyboards.inline.admins import GameListCallbackData, game_detail_ikb, game_
     game_role_ikb
 from keyboards.inline.admins.games_keyboards import role_detail_ikb, tag_list_ikb
 from loader import bot
-from states.admins.admins import GameAdminStatesGroup
+from states.admins.admins import GameAdminStatesGroup, GameTagsStateGroup
 from utils.models import Game, GameRole, Tag, GameTag
 
 edit_game_router = Router(name='edit_game')
@@ -37,10 +37,11 @@ async def get_game_info(callback: CallbackQuery, callback_data: GameListCallback
             photo=game.picture,
             caption=f'***{game.name}***\n'
                     f'***Описание:*** {game.description}\n'
-                    f'***Число игроков:*** \n'
+                    f'***Число игроков:*** {game.player_max_count}\n'
                     f'***Стоиомость:*** {game.price} руб.\n'
                     f'***Как играть:*** {game.rules}\n'
-                    f'***Тег:*** {", ".join(tag.name for tag in tags)}',
+                    f'***Тег:*** {", ".join(tag.name for tag in tags)}\n'
+                    f'***Мастерская вводня***: {game.master_url}.',
             reply_markup=await game_detail_ikb(game_id=game.id))
 
 
@@ -117,13 +118,20 @@ async def add_new_game_name(message: Message, state: FSMContext):
 
     # ________________________________________________________________________________________________________________
     elif state_data.get('edit') == 'rules':
-        if message.content_type == 'document':
-            game.rules = message.document.file_id
+        if state_data.get('category_id') == 2:
+            game.rules = message.text
             await game.save()
             await state.clear()
             text = f'Правила игры **{game.name}** изменены.'
         else:
-            text = f'Это не документ, отправь \"PDF!\" файлик с правилами игры ***{game.name}***'
+            if message.content_type == 'document':
+                game.rules = message.document.file_id
+                await game.save()
+                await state.clear()
+                text = f'Правила игры **{game.name}** изменены.'
+            else:
+                text = f'Это не документ, отправь \"PDF!\" файлик с правилами игры ***{game.name}***'
+
         await message.answer(text=text,
                              reply_markup=await game_edit_list_ikb(game_id=game.id, category_id=game.category_id))
 
@@ -150,9 +158,28 @@ async def add_new_game_name(message: Message, state: FSMContext):
             await state.clear()
             text = f'Уровень сложности игры **{game.name}** изменён на **{game.difficulty_level}**.'
         else:
-            text = f'Это не цифра, сложность игры***{game.name}*** по шкале от 1 до 10'
+            text = f'Это не цифра! Введи уровень сложность игры ***{game.name}*** по шкале от 1 до 10'
         await message.answer(text=text,
                              reply_markup=await game_edit_list_ikb(game_id=game.id, category_id=game.category_id))
+    # __________________________________________________________________________________________________________
+    elif state_data.get('edit') == 'master_url':
+        game.master_url = message.text
+        await game.save()
+        await message.answer(text='Мастерская вводная сохранена:',
+                             reply_markup=await game_role_ikb(game_id=game.id))
+    # ____________________________________________________________________________________________________________
+    elif state_data.get('edit') == 'price':
+        if message.text.isdigit():
+            game.price = int(message.text)
+            await game.save()
+            await state.clear()
+            text = f'Поиграть в ролевую игру ***{game.name}*** теперь стоит: ***{game.price}*** руб.'
+        else:
+            text = f'Это не цифра!!!\n' \
+                   f'Введите стоимость участия в игре ***{game.name}*** для одного человека:'
+        await message.answer(text=text,
+                             reply_markup=await game_edit_list_ikb(game_id=game.id, category_id=game.category_id))
+    # _______________________________________________________________________________________________________________
     else:
         await message.answer(text='Срабатывает условие для месенджей',
                              reply_markup=await game_edit_list_ikb(game_id=game.id, category_id=game.category_id))
@@ -186,9 +213,15 @@ async def edit_game_description(callback: CallbackQuery, callback_data: GameList
     game = await Game.get(pk=callback_data.game_id)
     await state.set_state(GameAdminStatesGroup.game_id)
     await state.update_data(game_id=game.id)
+    await state.update_data(category_id=callback_data.category_id)
     await state.update_data(edit='rules')
-    await callback.message.answer(text=f'Меняем ***правила*** игры ***{game.name}***\n'
-                                       f'Добавьте \"PDF\" файл с правилами игры:')
+    if callback_data.category_id == 1:
+        text = f'Меняем ***правила*** игры ***{game.name}***\n'
+        f'Добавьте \"PDF\" файл с правилами игры:'
+    else:
+        text = f'Меняем ***правила*** игры ***{game.name}***\n'
+        f'Добавьте сылочку на правилами игры:'
+    await callback.message.answer(text=text)
 
 
 @edit_game_router.callback_query(GameListCallbackData.filter(F.action == 'edit_player_max_count'))
@@ -212,8 +245,34 @@ async def edit_game_description(callback: CallbackQuery, callback_data: GameList
                                        f'По шкале от 0 до 10. (введите цифру):')
 
 
+@edit_game_router.callback_query(GameListCallbackData.filter(F.action == 'add_master_role'))
+async def add_master_url(callback: CallbackQuery, callback_data: GameListCallbackData, state: FSMContext):
+    await callback.message.delete()
+    await state.set_state(GameAdminStatesGroup.game_id)
+    await state.update_data(game_id=callback_data.game_id)
+    await state.update_data(edit='master_url')
+    await callback.message.answer(text='Введите сылочку на мастерскую вводную:')
+
+
+@edit_game_router.callback_query(GameListCallbackData.filter(F.action == 'edit_price'))
+async def edit_game_description(callback: CallbackQuery, callback_data: GameListCallbackData, state: FSMContext):
+    await callback.message.delete()
+    game = await Game.get(pk=callback_data.game_id)
+    await state.set_state(GameAdminStatesGroup.game_id)
+    await state.update_data(game_id=game.id)
+    await state.update_data(edit='price')
+    await callback.message.answer(text=f'Меняем ***стоимость*** участия в игре'
+                                       f' ***{game.name}*** для одного человека:')
+
+
 @edit_game_router.callback_query(GameListCallbackData.filter(F.action == 'edit_tag'))
-async def edit_tegs(callback: CallbackQuery, callback_data: GameListCallbackData):
+async def edit_tags(callback: CallbackQuery, callback_data: GameListCallbackData, state: FSMContext):
+    games = await GameTag.all(game_id=callback_data.game_id)
+    for game in games:
+        tag = await GameTag.get(pk=game.id)
+        await tag.delete()
+        await state.set_state(GameTagsStateGroup.tag_id)
+        await state.update_data(tag_id=[])
     await callback.message.edit_reply_markup(reply_markup=await tag_list_ikb(game_id=callback_data.game_id,
                                                                              category_id=callback_data.category_id))
 
