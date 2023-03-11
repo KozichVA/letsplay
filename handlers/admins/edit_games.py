@@ -5,7 +5,8 @@ from aiogram.fsm.context import FSMContext
 
 from keyboards.inline.admins import GameListCallbackData, game_detail_ikb, game_list_ikb, game_edit_list_ikb, \
     game_role_ikb
-from keyboards.inline.admins.games_keyboards import role_detail_ikb, tag_list_ikb
+from keyboards.inline.admins.games_keyboards import role_detail_ikb, tag_list_ikb, confirm_deletion_role_ikb, \
+    confirm_deletion_game_ikb
 from loader import bot
 from states.admins.admins import GameAdminStatesGroup, GameTagsStateGroup
 from utils.models import Game, GameRole, Tag, GameTag
@@ -43,6 +44,15 @@ async def get_game_info(callback: CallbackQuery, callback_data: GameListCallback
                     f'***Тег:*** {", ".join(tag.name for tag in tags)}\n'
                     f'***Мастерская вводня***: {game.master_url}.',
             reply_markup=await game_detail_ikb(game_id=game.id))
+
+
+@edit_game_router.callback_query(GameListCallbackData.filter(F.action == 'confirm_deletion_game'))
+async def confirm_deletion_role(callback: CallbackQuery, callback_data: GameListCallbackData):
+    await callback.message.delete()
+    game = await Game.get(pk=callback_data.game_id)
+    await callback.message.answer(text=f'Вы действительно хотите удалить ***{game.name}***?',
+                                  reply_markup=await confirm_deletion_game_ikb(game_id=game.id,
+                                                                               category_id=game.category_id))
 
 
 @edit_game_router.callback_query(GameListCallbackData.filter(F.action == 'del'))
@@ -298,6 +308,14 @@ async def get_game_role(callback: CallbackQuery, callback_data: GameListCallback
                                        f'Пол персонажа: ***{gender}***\n'
                                        f'Описание роли: {role.url}',
                                   reply_markup=await role_detail_ikb(role_id=role.id))
+
+
+@edit_game_router.callback_query(GameListCallbackData.filter(F.action == 'confirm_deletion_role'))
+async def confirm_deletion_role(callback: CallbackQuery, callback_data: GameListCallbackData):
+    role = await GameRole.get(pk=callback_data.role_id)
+    await callback.message.edit_text(text=f'Вы действительно хотите удалить ***{role.description} - {role.name}***?',
+                                     reply_markup=await confirm_deletion_role_ikb(game_id=role.game_id,
+                                                                                  role_id=role.id))
 
 
 @edit_game_router.callback_query(GameListCallbackData.filter(F.action == 'del_role'))

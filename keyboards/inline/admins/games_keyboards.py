@@ -85,7 +85,7 @@ async def game_detail_ikb(game_id: int) -> InlineKeyboardMarkup:
             InlineKeyboardButton(
                 text='УДАЛИТЬ',
                 callback_data=GameListCallbackData(
-                    action='del',
+                    action='confirm_deletion_game',
                     game_id=game.id
                 ).pack()
             )
@@ -259,7 +259,7 @@ async def role_detail_ikb(role_id: int) -> InlineKeyboardMarkup:
             InlineKeyboardButton(
                 text='УДАЛИТЬ',
                 callback_data=GameListCallbackData(
-                    action='del_role',
+                    action='confirm_deletion_role',
                     game_id=role.game_id,
                     role_id=role.id
                 ).pack()
@@ -297,4 +297,41 @@ async def category_list_price_ikb() -> InlineKeyboardMarkup:
                 text='назад',
                 callback_data=GameListCallbackData(
                     action='back_main_menu').pack())]]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+async def confirm_deletion_game_ikb(game_id: int, category_id: int) -> InlineKeyboardMarkup:
+    buttons = [[InlineKeyboardButton(
+        text='ДА',
+        callback_data=GameListCallbackData(
+            action='del',
+            game_id=game_id).pack()
+    ),
+        InlineKeyboardButton(
+        text='НЕТ',
+        callback_data=GameListCallbackData(
+            action='get_game',
+            game_id=game_id,
+            category_id=category_id).pack()
+        )
+    ]]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+async def confirm_deletion_role_ikb(game_id: int, role_id: int) -> InlineKeyboardMarkup:
+    buttons = [[InlineKeyboardButton(
+        text='ДА',
+        callback_data=GameListCallbackData(
+            action='del_role',
+            game_id=game_id,
+            role_id=role_id
+        ).pack()
+    ),
+        InlineKeyboardButton(
+        text='НЕТ',
+        callback_data=GameListCallbackData(
+            action='back_game_role_ikb',
+            game_id=game_id).pack()
+        )
+    ]]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
